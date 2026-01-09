@@ -18,7 +18,7 @@ UNITS = {
 
 
 def read_bvrf(fname, participants=None):
-    """Read BrainVision Recording Format (BVRF) files.
+    """Read BrainVision Recording Format (BVRF) recording.
 
     Parameters
     ----------
@@ -63,9 +63,9 @@ def read_bvrf(fname, participants=None):
     fs = float(header["EEGModality"]["DataSpecific"]["SamplingFrequencyInHertz"])
 
     n_channels = len(header["EEGModality"]["Channels"])
-    ch_names = [channel["Name"] for channel in header["EEGModality"]["Channels"]]
-    ch_types = [channel["Type"] for channel in header["EEGModality"]["Channels"]]
-    ch_units = [channel["Unit"] for channel in header["EEGModality"]["Channels"]]
+    ch_names = [ch["Name"] for ch in header["EEGModality"]["Channels"]]
+    ch_types = [ch["Type"].lower() for ch in header["EEGModality"]["Channels"]]
+    ch_units = [ch["Unit"] for ch in header["EEGModality"]["Channels"]]
 
     # read binary data (.bvrd)
     data = np.fromfile(f"{fname}.bvrd", dtype=dtype)  # multiplexed format
@@ -88,4 +88,6 @@ def read_bvrf(fname, participants=None):
         impedances = f.read_text(encoding="utf-8-sig").splitlines()
         # TODO
 
-    return data, ch_names, ch_types, ch_units, fs, markers, impedances
+    return data, fname, ch_names, ch_types, ch_units, fs, markers, impedances
+
+
