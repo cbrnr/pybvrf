@@ -1,6 +1,5 @@
-# See https://www.brainproducts.com/download/bvrf-reference-specification/
-
 import json
+from pathlib import Path
 
 import numpy as np
 
@@ -18,9 +17,45 @@ UNITS = {
 }
 
 
-def read_bvrf(fname):
+def read_bvrf(fname, participants=None):
+    """Read BrainVision Recording Format (BVRF) files.
+
+    Parameters
+    ----------
+    fname : str | Path
+        Path to the BVRF file (either without extension or one of `.bvrh`, `.bvrd`,
+        `.bvrm`, or `.bvri`).
+    participants : str | list of str | None
+        Participant identifier(s) to read. If None (default), return data for all
+        participants.
+
+    Returns
+    -------
+    TODO
+
+    Notes
+    -----
+    A BVRF recording consists of multiple files, which are expected to be available in
+    the same directory. The required files are:
+    - `<fname>.bvrh` (header file)
+    - `<fname>.bvrd` (data file)
+    - `<fname>.bvrm` (marker file)
+
+    Optionally, the following file may also be present:
+    - `<fname>.bvri` (impedance file)
+
+    See https://www.brainproducts.com/download/bvrf-reference-specification/ for the
+    official BVRF specification.
+    """
+    # sanitize fname
+    fname = Path(fname)
+    if fname.suffix in (".bvrh", ".bvrd", ".bvrm", ".bvri", ""):
+        fname = fname.with_suffix("")
+    else:
+        raise ValueError(f"Invalid file extension {fname.suffix}")
+
     # read header (.bvrh)
-    with open(f"{fname}.bvrh", "r") as f:
+    with open(f"{fname}.bvrh", "r", encoding="utf-8-sig") as f:
         header = json.load(f)
 
     dtype = DTYPES[header["EEGModality"]["BVRFFiles"]["DataFile"]["NumericDataType"]]
@@ -33,9 +68,24 @@ def read_bvrf(fname):
     ch_units = [channel["Unit"] for channel in header["EEGModality"]["Channels"]]
 
     # read binary data (.bvrd)
-    data = np.fromfile(f"{fname}.bvrd", dtype=dtype)
+    data = np.fromfile(f"{fname}.bvrd", dtype=dtype)  # multiplexed format
     data = data.reshape((n_channels, -1), order="F")
-    scalings = np.array([UNITS[unit] for unit in ch_units])[:, None]
-    data *= scalings
+    data = data * np.array([UNITS[unit] for unit in ch_units])[:, None]  # rescale to V
 
-    return data, ch_names, ch_types, ch_units, fs
+    # read marker file (.bvrm)
+    markers = np.genfromtxt(
+        f"{fname}.bvrm",
+        delimiter="\t",
+        names=True,
+        dtype=None,
+        encoding="utf-8-sig",
+        autostrip=True,
+    )
+
+    # read impedance file (.bvri) if it exists
+    impedances = None
+    if (f := Path(f"{fname}.bvri")).is_file():
+        impedances = f.read_text(encoding="utf-8-sig").splitlines()
+        # TODO
+
+    return data, ch_names, ch_types, ch_units, fs, markers, impedances
