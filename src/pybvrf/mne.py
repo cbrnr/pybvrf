@@ -19,20 +19,21 @@ class RawBVRF(BaseRaw):
             Participant identifier(s) to read. If None (default), return data for all
             participants.
         """
-        data, fname, ch_names, ch_types, ch_units, fs, markers, impedances = read_bvrf(
-            fname, participants
-        )
+        data, info, markers, impedances = read_bvrf(fname, participants)
+
+        fs = info["fs"]
 
         mne_ch_types = list(get_channel_type_constants().keys())
         ch_types = [
-            ch_type if ch_type in mne_ch_types else "misc" for ch_type in ch_types
+            ch_type if ch_type in mne_ch_types else "misc"
+            for ch_type in info["ch_types"]
         ]
-        info = create_info(ch_names=ch_names, sfreq=fs, ch_types=ch_types)
+        info = create_info(ch_names=info["ch_names"], sfreq=fs, ch_types=ch_types)
 
         super().__init__(
             preload=data,
             info=info,
-            filenames=[fname.with_suffix(".bvrh")],
+            filenames=[info["fname"].with_suffix(".bvrh")],
             *args,
             **kwargs,
         )

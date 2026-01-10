@@ -87,13 +87,21 @@ def read_bvrf(fname, participants=None):
     impedances = None
     if (f := Path(f"{fname}.bvri")).is_file():
         lines = f.read_text(encoding="utf-8-sig").splitlines()
-        
+
         electrode_lines = [s for s in lines if s.startswith("Electrode")]
         datetime_lines = [s for s in lines if re.match(r"^\d{4}-\d{2}-\d{2}", s)]
-        
+
         if electrode_lines and datetime_lines:
             electrodes = electrode_lines[0].split("\t")[1:]
             values = datetime_lines[0].split("\t")[1:]
             impedances = {e: float(v) for e, v in zip(electrodes, values)}
 
-    return data, fname, ch_names, ch_types, ch_units, fs, markers, impedances
+    info = {
+        "fname": fname,
+        "ch_names": ch_names,
+        "ch_types": ch_types,
+        "ch_units": ch_units,
+        "fs": fs,
+    }
+
+    return data, info, markers, impedances
