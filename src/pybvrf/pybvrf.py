@@ -1,21 +1,8 @@
 import json
+import re
 from pathlib import Path
 
 import numpy as np
-import re
-
-DTYPES = {
-    "Int16": np.int16,
-    "Int32": np.int32,
-    "Single": np.float32,
-    "Double": np.float64,
-}
-UNITS = {
-    "V": 1e0,
-    "mV": 1e-3,
-    "µV": 1e-6,
-    "nV": 1e-9,
-}
 
 
 def read_bvrf(fname, participants=None):
@@ -55,27 +42,53 @@ def read_bvrf(fname, participants=None):
     else:
         raise ValueError(f"Invalid file extension {fname.suffix}")
 
-    # read header (.bvrh)
-    with open(f"{fname}.bvrh", "r", encoding="utf-8-sig") as f:
+    header = _read_bvrh(f"{fname}.bvrh")
+    data = _read_bvrd(
+        f"{fname}.bvrd", header["dtype"], header["n_channels"], header["ch_units"]
+    )
+    markers = _read_bvrm(f"{fname}.bvrm")
+    impedances = (
+        _read_bvri(f"{fname}.bvri") if (fname.with_suffix(".bvri")).is_file() else None
+    )
+
+    return header, data, markers, impedances
+
+
+def _read_bvrh(fname):
+    with open(fname, "r", encoding="utf-8-sig") as f:
         header = json.load(f)
 
-    dtype = DTYPES[header["EEGModality"]["BVRFFiles"]["DataFile"]["NumericDataType"]]
+    DTYPES = {
+        "Int16": np.int16,
+        "Int32": np.int32,
+        "Single": np.float32,
+        "Double": np.float64,
+    }
 
-    fs = float(header["EEGModality"]["DataSpecific"]["SamplingFrequencyInHertz"])
+    return {
+        "fname": fname,
+        "dtype": DTYPES[
+            header["EEGModality"]["BVRFFiles"]["DataFile"]["NumericDataType"]
+        ],
+        "fs": float(header["EEGModality"]["DataSpecific"]["SamplingFrequencyInHertz"]),
+        "n_channels": len(header["EEGModality"]["Channels"]),
+        "ch_names": [ch["Name"] for ch in header["EEGModality"]["Channels"]],
+        "ch_types": [ch["Type"].lower() for ch in header["EEGModality"]["Channels"]],
+        "ch_units": [ch["Unit"] for ch in header["EEGModality"]["Channels"]],
+        "yaml_header": header,
+    }
 
-    n_channels = len(header["EEGModality"]["Channels"])
-    ch_names = [ch["Name"] for ch in header["EEGModality"]["Channels"]]
-    ch_types = [ch["Type"].lower() for ch in header["EEGModality"]["Channels"]]
-    ch_units = [ch["Unit"] for ch in header["EEGModality"]["Channels"]]
 
-    # read binary data (.bvrd)
-    data = np.fromfile(f"{fname}.bvrd", dtype=dtype)  # multiplexed format
+def _read_bvrd(fname, dtype, n_channels, ch_units):
+    data = np.fromfile(fname, dtype=dtype)
     data = data.reshape((n_channels, -1), order="F")
-    data = data * np.array([UNITS[unit] for unit in ch_units])[:, None]  # rescale to V
+    UNITS = {"V": 1e0, "mV": 1e-3, "µV": 1e-6, "nV": 1e-9}
+    return data * np.array([UNITS[unit] for unit in ch_units])[:, None]  # rescale to V
 
-    # read marker file (.bvrm)
-    markers = np.genfromtxt(
-        f"{fname}.bvrm",
+
+def _read_bvrm(fname):
+    return np.genfromtxt(
+        fname,
         delimiter="\t",
         names=True,
         dtype=None,
@@ -83,25 +96,15 @@ def read_bvrf(fname, participants=None):
         autostrip=True,
     )
 
-    # read impedance file (.bvri) if it exists
-    impedances = None
-    if (f := Path(f"{fname}.bvri")).is_file():
-        lines = f.read_text(encoding="utf-8-sig").splitlines()
 
-        electrode_lines = [s for s in lines if s.startswith("Electrode")]
-        datetime_lines = [s for s in lines if re.match(r"^\d{4}-\d{2}-\d{2}", s)]
+def _read_bvri(fname):
+    lines = Path(fname).read_text(encoding="utf-8-sig").splitlines()
 
-        if electrode_lines and datetime_lines:
-            electrodes = electrode_lines[0].split("\t")[1:]
-            values = datetime_lines[0].split("\t")[1:]
-            impedances = {e: float(v) for e, v in zip(electrodes, values)}
+    electrode_lines = [s for s in lines if s.startswith("Electrode")]
+    datetime_lines = [s for s in lines if re.match(r"^\d{4}-\d{2}-\d{2}", s)]
 
-    info = {
-        "fname": fname,
-        "ch_names": ch_names,
-        "ch_types": ch_types,
-        "ch_units": ch_units,
-        "fs": fs,
-    }
-
-    return data, info, markers, impedances
+    if electrode_lines and datetime_lines:
+        electrodes = electrode_lines[0].split("\t")[1:]
+        values = datetime_lines[0].split("\t")[1:]
+        return {e: float(v) for e, v in zip(electrodes, values)}
+    return None
