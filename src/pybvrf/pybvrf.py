@@ -65,6 +65,11 @@ def _read_bvrh(fname):
         "Double": np.float64,
     }
 
+    if "Participants" in header:
+        participant_ids = [p["Id"] for p in header["Participants"]]
+    else:
+        participant_ids = None
+
     return {
         "fname": fname,
         "dtype": DTYPES[
@@ -75,6 +80,8 @@ def _read_bvrh(fname):
         "ch_names": [ch["Name"] for ch in header["EEGModality"]["Channels"]],
         "ch_types": [ch["Type"].lower() for ch in header["EEGModality"]["Channels"]],
         "ch_units": [ch["Unit"] for ch in header["EEGModality"]["Channels"]],
+        "n_participants": len(header.get("Participants", [1])),
+        "participant_ids": participant_ids,
         "yaml_header": header,
     }
 
