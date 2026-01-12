@@ -36,7 +36,7 @@ def read_bvrf(fname, participants=None):
     official BVRF specification.
     """
     # sanitize fname
-    fname = Path(fname)
+    fname = Path(fname).expanduser().resolve()
     if fname.suffix in (".bvrh", ".bvrd", ".bvrm", ".bvri", ""):
         fname = fname.with_suffix("")
     else:
