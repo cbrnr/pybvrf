@@ -44,7 +44,11 @@ def read_bvrf(fname, participants=None):
 
     header = _read_bvrh(f"{fname}.bvrh")
     data = _read_bvrd(
-        f"{fname}.bvrd", header["dtype"], header["n_channels"], header["ch_units"]
+        f"{fname}.bvrd",
+        header["dtype"],
+        header["n_channels"],
+        header["ch_units"],
+        header["ch_resolutions"],
     )
     markers = _read_bvrm(f"{fname}.bvrm")
     impedances = (
@@ -80,17 +84,24 @@ def _read_bvrh(fname):
         "ch_names": [ch["Name"] for ch in header["EEGModality"]["Channels"]],
         "ch_types": [ch["Type"].lower() for ch in header["EEGModality"]["Channels"]],
         "ch_units": [ch["Unit"] for ch in header["EEGModality"]["Channels"]],
+        "ch_resolutions": [
+            ch.get("ResolutionPerBit", 1) for ch in header["EEGModality"]["Channels"]
+        ],
         "n_participants": len(header.get("Participants", [1])),
         "participant_ids": participant_ids,
         "yaml_header": header,
     }
 
 
-def _read_bvrd(fname, dtype, n_channels, ch_units):
+def _read_bvrd(fname, dtype, n_channels, ch_units, ch_resolutions):
     data = np.fromfile(fname, dtype=dtype)
     data = data.reshape((n_channels, -1), order="F")
     UNITS = {"V": 1e0, "mV": 1e-3, "µV": 1e-6, "nV": 1e-9}
-    return data * np.array([UNITS[unit] for unit in ch_units])[:, None]  # rescale to V
+    return (
+        data
+        * np.array([UNITS[unit] for unit in ch_units])[:, None]
+        * np.array(ch_resolutions)[:, None]
+    )
 
 
 def _read_bvrm(fname):
