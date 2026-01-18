@@ -5,6 +5,80 @@ from pathlib import Path
 import numpy as np
 
 
+def read_bvrf(fname):
+    """Read BrainVision Recording Format (BVRF) recording.
+
+    Parameters
+    ----------
+    fname : str | Path
+        Path to the BVRF file (either without extension or one of `.bvrh`, `.bvrd`,
+        `.bvrm`, or `.bvri`).
+
+    Returns
+    -------
+    header : dict
+        Header information. Channel names are modified to include participant ID
+        suffix `" ({Id})"` for participant-specific channels. Channels shared across
+        all participants have no suffix.
+    data : ndarray, shape (n_channels, n_samples)
+        EEG data for all channels (in V). Rows correspond to channels in the order
+        specified in the header.
+    markers : ndarray
+        All markers from all participants combined.
+    impedances : dict or None
+        Impedances for all electrodes (in kOhm), with participant-specific electrodes
+        having a suffix `" ({Id})"`. None if impedance file is not available.
+
+    Notes
+    -----
+    A BVRF recording consists of multiple files, which are expected to be available in
+    the same directory. The required files are:
+    - `<fname>.bvrh` (header file)
+    - `<fname>.bvrd` (data file)
+    - `<fname>.bvrm` (marker file)
+
+    Optionally, the following file may also be present:
+    - `<fname>.bvri` (impedance file)
+
+    See https://www.brainproducts.com/download/bvrf-reference-specification/ for the
+    official BVRF specification.
+
+    For single-participant datasets without a participant ID in the header, the
+    participant ID is set to "1", but no suffix is added to channel names.
+
+    For multi-participant datasets, channel names and impedance electrode names get
+    a suffix `" ({Id})"` where `{Id}` is the participant ID.
+    """
+    fname = Path(fname).expanduser().resolve()
+    if fname.suffix in (".bvrh", ".bvrd", ".bvrm", ".bvri", ""):
+        fname = fname.with_suffix("")
+    else:
+        raise ValueError(f"Invalid file extension {fname.suffix}")
+
+    header = _read_bvrh(f"{fname}.bvrh")
+
+    # read all data
+    data = _read_bvrd(
+        f"{fname}.bvrd",
+        header["dtype"],
+        header["n_channels"],
+        header["ch_units"],
+        header["ch_resolutions"],
+    )
+
+    # read all markers
+    markers = _read_bvrm(f"{fname}.bvrm")
+
+    # read all impedances
+    impedances = (
+        _read_bvri(f"{fname}.bvri", header["ch_names"])
+        if (fname.with_suffix(".bvri")).is_file()
+        else None
+    )
+
+    return header, data, markers, impedances
+
+
 def _read_bvrh(fname):
     """Read header from a BrainVision Recording Format (BVRF) recording.
 
@@ -80,80 +154,6 @@ def _read_bvrh(fname):
         "ch_resolutions": ch_resolutions,
         "yaml_header": header,
     }
-
-
-def read_bvrf(fname):
-    """Read BrainVision Recording Format (BVRF) recording.
-
-    Parameters
-    ----------
-    fname : str | Path
-        Path to the BVRF file (either without extension or one of `.bvrh`, `.bvrd`,
-        `.bvrm`, or `.bvri`).
-
-    Returns
-    -------
-    header : dict
-        Header information. Channel names are modified to include participant ID
-        suffix `" ({Id})"` for participant-specific channels. Channels shared across
-        all participants have no suffix.
-    data : ndarray, shape (n_channels, n_samples)
-        EEG data for all channels (in V). Rows correspond to channels in the order
-        specified in the header.
-    markers : ndarray
-        All markers from all participants combined.
-    impedances : dict or None
-        Impedances for all electrodes (in kOhm), with participant-specific electrodes
-        having a suffix `" ({Id})"`. None if impedance file is not available.
-
-    Notes
-    -----
-    A BVRF recording consists of multiple files, which are expected to be available in
-    the same directory. The required files are:
-    - `<fname>.bvrh` (header file)
-    - `<fname>.bvrd` (data file)
-    - `<fname>.bvrm` (marker file)
-
-    Optionally, the following file may also be present:
-    - `<fname>.bvri` (impedance file)
-
-    See https://www.brainproducts.com/download/bvrf-reference-specification/ for the
-    official BVRF specification.
-
-    For single-participant datasets without a participant ID in the header, the
-    participant ID is set to "1", but no suffix is added to channel names.
-
-    For multi-participant datasets, channel names and impedance electrode names get
-    a suffix `" ({Id})"` where `{Id}` is the participant ID.
-    """
-    fname = Path(fname).expanduser().resolve()
-    if fname.suffix in (".bvrh", ".bvrd", ".bvrm", ".bvri", ""):
-        fname = fname.with_suffix("")
-    else:
-        raise ValueError(f"Invalid file extension {fname.suffix}")
-
-    header = _read_bvrh(f"{fname}.bvrh")
-
-    # read all data
-    data = _read_bvrd(
-        f"{fname}.bvrd",
-        header["dtype"],
-        header["n_channels"],
-        header["ch_units"],
-        header["ch_resolutions"],
-    )
-
-    # read all markers
-    markers = _read_bvrm(f"{fname}.bvrm")
-
-    # read all impedances
-    impedances = (
-        _read_bvri(f"{fname}.bvri", header["ch_names"])
-        if (fname.with_suffix(".bvri")).is_file()
-        else None
-    )
-
-    return header, data, markers, impedances
 
 
 def _read_bvrd(fname, dtype, n_channels, ch_units, ch_resolutions):
