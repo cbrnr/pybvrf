@@ -5,9 +5,9 @@ from pybvrf.pybvrf import read_bvrf
 
 
 class RawBVRF(BaseRaw):
-    """Raw data from BrainVision Recording Format (BVRF) recording."""
+    """BrainVision Recording Format (BVRF) recording."""
 
-    def __init__(self, fname, participants=None, *args, **kwargs):
+    def __init__(self, fname, *args, **kwargs):
         """Read BrainVision Recording Format (BVRF) recording.
 
         Parameters
@@ -15,11 +15,8 @@ class RawBVRF(BaseRaw):
         fname : str | Path
             Path to the BVRF file (either without extension or one of `.bvrh`, `.bvrd`,
             `.bvrm`, or `.bvri`).
-        participants : str | list of str | None
-            Participant identifier(s) to read. If None (default), return data for all
-            participants.
         """
-        header, data, markers, impedances = read_bvrf(fname, participants)
+        header, data, markers, _ = read_bvrf(fname)  # MNE does not support impedances
 
         fs = header["fs"]
 
@@ -33,7 +30,7 @@ class RawBVRF(BaseRaw):
         super().__init__(
             preload=data,
             info=info,
-            filenames=[header["fname"]],
+            filenames=[str(header["fname"].with_suffix(".bvrh"))],
             *args,
             **kwargs,
         )
@@ -48,7 +45,7 @@ class RawBVRF(BaseRaw):
         )
 
 
-def read_raw_bvrf(fname, participants=None, *args, **kwargs):
+def read_raw_bvrf(fname, *args, **kwargs):
     """Read BrainVision Recording Format (BVRF) recording.
 
     Parameters
@@ -56,13 +53,10 @@ def read_raw_bvrf(fname, participants=None, *args, **kwargs):
     fname : str | Path
         Path to the BVRF file (either without extension or one of `.bvrh`, `.bvrd`,
         `.bvrm`, or `.bvri`).
-    participants : str | list of str | None
-        Participant identifier(s) to read. If None (default), return data for all
-        participants.
 
     Returns
     -------
     RawBVRF
         The raw data.
     """
-    return RawBVRF(fname, participants, *args, **kwargs)
+    return RawBVRF(fname, *args, **kwargs)

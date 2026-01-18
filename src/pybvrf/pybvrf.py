@@ -1,12 +1,11 @@
 import json
 import re
-from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 
 
-def read_bvrf_header(fname):
+def _read_bvrh(fname):
     """Read header from a BrainVision Recording Format (BVRF) recording.
 
     Parameters
@@ -22,19 +21,18 @@ def read_bvrf_header(fname):
         - "dtype": data type of the binary data
         - "fs": sampling frequency in Hz
         - "n_channels": total number of channels
-        - "participants": participant IDs
-        - "channels": dict with participant IDs as keys, each containing:
-            - "names": list of channel names
-            - "types": list of channel types
-            - "units": list of channel units
-            - "resolutions": list of channel resolutions
+        - "n_participants": number of participants
+        - "ch_names": list of channel names
+        - "ch_types": list of channel types
+        - "ch_units": list of channel units
+        - "ch_resolutions": list of channel resolutions
         - "yaml_header": original JSON header content
 
     Examples
     --------
-    >>> header = read_bvrf_header("recording.bvrh")
-    >>> print(header["participants"])
-    >>> print(header["channels"]["1"]["names"])
+    >>> header = _read_bvrh("recording.bvrh")
+    >>> print(header["n_participants"])
+    >>> print(header["ch_names"])
     """
     fname = Path(fname).expanduser().resolve()
     if fname.suffix not in (".bvrh", ""):
@@ -51,31 +49,22 @@ def read_bvrf_header(fname):
         "Double": np.float64,
     }
 
-    if "Participants" in header:
-        participant_ids = [p["Id"] for p in header["Participants"]]
-    else:
-        participant_ids = ["1"]
+    n_participants = len(header["Participants"]) if "Participants" in header else 1
 
-    # organize channels by participant ID
-    ch_info = defaultdict(
-        lambda: {
-            "names": [],
-            "types": [],
-            "units": [],
-            "resolutions": [],
-            "indices": [],
-        }
-    )
+    ch_names = []
+    ch_types = []
+    ch_units = []
+    ch_resolutions = []
 
-    for ch_idx, ch in enumerate(header["EEGModality"]["Channels"]):
-        pids = participant_ids if "ParticipantId" not in ch else [ch["ParticipantId"]]
-
-        for pid in pids:
-            ch_info[pid]["names"].append(ch["Name"])
-            ch_info[pid]["types"].append(ch["Type"].lower())
-            ch_info[pid]["units"].append(ch["Unit"])
-            ch_info[pid]["resolutions"].append(ch.get("ResolutionPerBit", 1))
-            ch_info[pid]["indices"].append(ch_idx)
+    for ch in header["EEGModality"]["Channels"]:
+        ch_names.append(
+            f"{ch['Name']} ({ch['ParticipantId']})"
+            if "ParticipantId" in ch
+            else ch["Name"]
+        )
+        ch_types.append(ch["Type"].lower())
+        ch_units.append(ch["Unit"])
+        ch_resolutions.append(ch.get("ResolutionPerBit", 1))
 
     return {
         "fname": fname.with_suffix(""),
@@ -83,14 +72,17 @@ def read_bvrf_header(fname):
             header["EEGModality"]["BVRFFiles"]["DataFile"]["NumericDataType"]
         ],
         "fs": float(header["EEGModality"]["DataSpecific"]["SamplingFrequencyInHertz"]),
+        "n_participants": n_participants,
         "n_channels": len(header["EEGModality"]["Channels"]),
-        "participants": participant_ids,
-        "channels": dict(ch_info),
+        "ch_names": ch_names,
+        "ch_types": ch_types,
+        "ch_units": ch_units,
+        "ch_resolutions": ch_resolutions,
         "yaml_header": header,
     }
 
 
-def read_bvrf(fname, participants=None):
+def read_bvrf(fname):
     """Read BrainVision Recording Format (BVRF) recording.
 
     Parameters
@@ -98,18 +90,21 @@ def read_bvrf(fname, participants=None):
     fname : str | Path
         Path to the BVRF file (either without extension or one of `.bvrh`, `.bvrd`,
         `.bvrm`, or `.bvri`).
-    participants : str | list of str | None
-        Participant ID(s) to read. If None (default), return data for all participants
-        in the recording.
 
     Returns
     -------
-    dict
-        The keys are participant IDs, and each value is a dict containing:
-        - "header": dict with header information (see `read_bvrf_header()`)
-        - "data": ndarray, shape (n_channels, n_samples) with EEG data (in V)
-        - "markers": ndarray, shape (n_markers,) with marker information
-        - "impedances": dict with impedances per electrode (in kOhm) or None
+    header : dict
+        Header information. Channel names are modified to include participant ID
+        suffix `" ({Id})"` for participant-specific channels. Channels shared across
+        all participants have no suffix.
+    data : ndarray, shape (n_channels, n_samples)
+        EEG data for all channels (in V). Rows correspond to channels in the order
+        specified in the header.
+    markers : ndarray
+        All markers from all participants combined.
+    impedances : dict or None
+        Impedances for all electrodes (in kOhm), with participant-specific electrodes
+        having a suffix `" ({Id})"`. None if impedance file is not available.
 
     Notes
     -----
@@ -126,7 +121,10 @@ def read_bvrf(fname, participants=None):
     official BVRF specification.
 
     For single-participant datasets without a participant ID in the header, the
-    participant ID is set to "1".
+    participant ID is set to "1", but no suffix is added to channel names.
+
+    For multi-participant datasets, channel names and impedance electrode names get
+    a suffix `" ({Id})"` where `{Id}` is the participant ID.
     """
     fname = Path(fname).expanduser().resolve()
     if fname.suffix in (".bvrh", ".bvrd", ".bvrm", ".bvri", ""):
@@ -134,99 +132,73 @@ def read_bvrf(fname, participants=None):
     else:
         raise ValueError(f"Invalid file extension {fname.suffix}")
 
-    header = read_bvrf_header(f"{fname}.bvrh")
+    header = _read_bvrh(f"{fname}.bvrh")
 
-    # determine which participant(s) to read
-    if participants is None:  # all
-        participants = header["participants"]
-    elif isinstance(participants, str):
-        participants = [participants]
-    else:
-        participants = list(participants)
-
-    # read data for each participant
-    result = {}
-    for pid in participants:
-        data = _read_bvrd(
-            f"{fname}.bvrd",
-            header["dtype"],
-            header["n_channels"],
-            header["channels"][pid]["indices"],
-            header["channels"][pid]["units"],
-            header["channels"][pid]["resolutions"],
-        )
-        markers = _read_bvrm(f"{fname}.bvrm", pid)
-        impedances = (
-            _read_bvri(f"{fname}.bvri", header["channels"][pid]["names"])
-            if (fname.with_suffix(".bvri")).is_file()
-            else None
-        )
-
-        result[pid] = {
-            "header": header,
-            "data": data,
-            "markers": markers,
-            "impedances": impedances,
-        }
-
-    return result
-
-
-def _read_bvrd(fname, dtype, n_channels, ch_indices, ch_units, ch_resolutions):
-    """Read binary data file and filter for specific participant.
-
-    Parameters
-    ----------
-    fname : str
-        Path to the .bvrd file
-    dtype : numpy dtype
-        Data type for reading binary data
-    n_channels : int
-        Total number of channels in the file
-    ch_indices : list of int
-        Indices of channels belonging to this participant
-    ch_units : list of str
-        Units for each channel
-    ch_resolutions : list of float
-        Resolution per bit for each channel
-
-    Returns
-    -------
-    data : ndarray, shape (n_channels, n_samples)
-        Filtered data for the specified participant in Volts
-    """
-    # read data and reshape to (n_channels, n_samples)
-    data = np.fromfile(fname, dtype=dtype)
-    n_samples = len(data) // n_channels
-    data = data.reshape((n_channels, n_samples), order="F")
-
-    # filter channels for a specific participant (as given by ch_indices)
-    data = data[ch_indices, :]
-
-    UNITS = {"V": 1e0, "mV": 1e-3, "µV": 1e-6, "nV": 1e-9}
-    return (
-        data
-        * np.array([UNITS[unit] for unit in ch_units])[:, None]
-        * np.array(ch_resolutions)[:, None]
+    # read all data
+    data = _read_bvrd(
+        f"{fname}.bvrd",
+        header["dtype"],
+        header["n_channels"],
+        header["ch_units"],
+        header["ch_resolutions"],
     )
 
+    # read all markers
+    markers = _read_bvrm(f"{fname}.bvrm")
 
-def _read_bvrm(fname, pid):
-    """Read marker file and filter for specific participant.
+    # read all impedances
+    impedances = (
+        _read_bvri(f"{fname}.bvri", header["ch_names"])
+        if (fname.with_suffix(".bvri")).is_file()
+        else None
+    )
+
+    return header, data, markers, impedances
+
+
+def _read_bvrd(fname, dtype, n_channels, ch_units, ch_resolutions):
+    """Read BVRF binary data file.
 
     Parameters
     ----------
     fname : str
-        Path to the .bvrm file
-    pid : str
-        Participant ID
+        Path to the .bvrd file.
+    dtype : NumPy data type
+        Data type for reading binary data.
+    n_channels : int
+        Number of channels in the file.
+    ch_units : list of str
+        Units for each channel.
+    ch_resolutions : list of float
+        Resolution per bit for each channel.
 
     Returns
     -------
-    markers : ndarray
-        Markers for the specified participant
+    ndarray, shape (n_channels, n_samples)
+        Data (in V).
     """
-    markers = np.genfromtxt(
+    UNITS = {"V": 1e0, "mV": 1e-3, "µV": 1e-6, "nV": 1e-9}
+
+    data = np.fromfile(fname, dtype=dtype)
+    data = data.reshape((n_channels, -1), order="F")
+    scales = np.array([UNITS[u] * r for u, r in zip(ch_units, ch_resolutions)])
+    return data * scales[:, None]
+
+
+def _read_bvrm(fname):
+    """Read BVRFmarker file.
+
+    Parameters
+    ----------
+    fname : str
+        Path to the .bvrm file.
+
+    Returns
+    -------
+    ndarray
+        Markers (in a structured NumPy array).
+    """
+    return np.genfromtxt(
         fname,
         delimiter="\t",
         names=True,
@@ -235,44 +207,40 @@ def _read_bvrm(fname, pid):
         autostrip=True,
     )
 
-    # filter by ParticipantId if the field exists
-    if markers.size > 0 and "ParticipantId" in markers.dtype.names:
-        mask = markers["ParticipantId"] == pid
-        return markers[mask]
-
-    return markers
-
 
 def _read_bvri(fname, ch_names):
-    """Read impedance file and filter for specific participant.
+    """Read BVRF impedance file.
 
     Parameters
     ----------
     fname : str
-        Path to the .bvri file
+        Path to the .bvri file.
     ch_names : list of str
-        Channel names for this participant
+        Channel names.
 
     Returns
     -------
-    impedances : dict or None
-        Impedances for channels of the specified participant
+    dict or None
+        Impedances for all electrodes, or None if impedances are not available.
     """
     lines = Path(fname).read_text(encoding="utf-8-sig").splitlines()
 
+    # find participant ID, electrode, and impedance measurement lines
+    pid_lines = [s for s in lines if s.startswith("ParticipantId")]
     electrode_lines = [s for s in lines if s.startswith("Electrode")]
     datetime_lines = [s for s in lines if re.match(r"^\d{4}-\d{2}-\d{2}", s)]
 
-    if electrode_lines and datetime_lines:
-        electrodes = electrode_lines[0].split("\t")[1:]
-        values = datetime_lines[0].split("\t")[1:]
+    if not electrode_lines or not datetime_lines:
+        return None
 
-        # # filter channels for a specific participant (as given by ch_names)
-        result = {}
-        for e, v in zip(electrodes, values):
-            if e in ch_names:
-                result[e] = float(v)
+    electrodes = electrode_lines[0].split("\t")[1:]
+    values = datetime_lines[0].split("\t")[1:]
+    pids = pid_lines[0].split("\t")[1:] if pid_lines else [None] * len(electrodes)
 
-        return result if result else None
+    result = {}
+    for electrode, pid, value in zip(electrodes, pids, values):
+        ch_name = f"{electrode} ({pid})" if pid else electrode
+        if ch_name in set(ch_names):
+            result[ch_name] = float(value)
 
-    return None
+    return result if result else None
