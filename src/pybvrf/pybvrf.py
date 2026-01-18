@@ -17,17 +17,33 @@ def read_bvrf(fname):
     Returns
     -------
     header : dict
-        Header information. Channel names are modified to include participant ID
-        suffix `" ({Id})"` for participant-specific channels. Channels shared across
-        all participants have no suffix.
+        Header information with the following items:
+        - fname : Path
+            File path (without extension).
+        - dtype : np.float32 | np.float64 | np.int16 | np.int32
+            Data type of the binary data.
+        - fs : float
+            Sampling frequency (in Hz).
+        - n_participants : int
+            Number of participants.
+        - n_channels : int
+            Number of channels.
+        - ch_names : list of str
+            Channel names.
+        - ch_types : list of str
+            Channel types.
+        - ch_units : list of str
+            Channel units.
+        - ch_resolutions : list of float
+            Channel resolutions.
+        - yaml_header : dict
+            Original JSON header.
     data : ndarray, shape (n_channels, n_samples)
-        EEG data for all channels (in V). Rows correspond to channels in the order
-        specified in the header.
+        EEG data.
     markers : ndarray
-        All markers from all participants combined.
-    impedances : dict or None
-        Impedances for all electrodes (in kOhm), with participant-specific electrodes
-        having a suffix `" ({Id})"`. None if impedance file is not available.
+        Markers.
+    impedances : dict | None
+        Electrode impedances (in kOhm) or None if not available.
 
     Notes
     -----
@@ -42,36 +58,23 @@ def read_bvrf(fname):
 
     See https://www.brainproducts.com/download/bvrf-reference-specification/ for the
     official BVRF specification.
-
-    For single-participant datasets without a participant ID in the header, the
-    participant ID is set to "1", but no suffix is added to channel names.
-
-    For multi-participant datasets, channel names and impedance electrode names get
-    a suffix `" ({Id})"` where `{Id}` is the participant ID.
     """
-    fname = Path(fname).expanduser().resolve()
-    if fname.suffix in (".bvrh", ".bvrd", ".bvrm", ".bvri", ""):
-        fname = fname.with_suffix("")
-    else:
-        raise ValueError(f"Invalid file extension {fname.suffix}")
+    fname = _validate_fname(fname, [".bvrh", ".bvrd", ".bvrm", ".bvri"])
 
-    header = _read_bvrh(f"{fname}.bvrh")
+    header = _read_bvrh(fname.with_suffix(".bvrh"))
 
-    # read all data
     data = _read_bvrd(
-        f"{fname}.bvrd",
+        fname.with_suffix(".bvrd"),
         header["dtype"],
         header["n_channels"],
         header["ch_units"],
         header["ch_resolutions"],
     )
 
-    # read all markers
-    markers = _read_bvrm(f"{fname}.bvrm")
+    markers = _read_bvrm(fname.with_suffix(".bvrm"))
 
-    # read all impedances
     impedances = (
-        _read_bvri(f"{fname}.bvri", header["ch_names"])
+        _read_bvri(fname.with_suffix(".bvri"), header["ch_names"])
         if (fname.with_suffix(".bvri")).is_file()
         else None
     )
@@ -80,7 +83,7 @@ def read_bvrf(fname):
 
 
 def _read_bvrh(fname):
-    """Read header from a BrainVision Recording Format (BVRF) recording.
+    """Read BVRF header file.
 
     Parameters
     ----------
@@ -108,10 +111,7 @@ def _read_bvrh(fname):
     >>> print(header["n_participants"])
     >>> print(header["ch_names"])
     """
-    fname = Path(fname).expanduser().resolve()
-    if fname.suffix not in (".bvrh", ""):
-        raise ValueError(f"Invalid file extension {fname.suffix} (expected .bvrh)")
-    fname = fname.with_suffix(".bvrh")
+    fname = _validate_fname(fname, ".bvrh")
 
     with open(fname, "r", encoding="utf-8-sig") as f:
         header = json.load(f)
@@ -177,6 +177,8 @@ def _read_bvrd(fname, dtype, n_channels, ch_units, ch_resolutions):
     ndarray, shape (n_channels, n_samples)
         Data (in V).
     """
+    fname = _validate_fname(fname, ".bvrd")
+
     UNITS = {"V": 1e0, "mV": 1e-3, "µV": 1e-6, "nV": 1e-9}
 
     data = np.fromfile(fname, dtype=dtype)
@@ -186,7 +188,7 @@ def _read_bvrd(fname, dtype, n_channels, ch_units, ch_resolutions):
 
 
 def _read_bvrm(fname):
-    """Read BVRFmarker file.
+    """Read BVRF marker file.
 
     Parameters
     ----------
@@ -198,6 +200,8 @@ def _read_bvrm(fname):
     ndarray
         Markers (in a structured NumPy array).
     """
+    fname = _validate_fname(fname, ".bvrm")
+
     return np.genfromtxt(
         fname,
         delimiter="\t",
@@ -223,6 +227,8 @@ def _read_bvri(fname, ch_names):
     dict or None
         Impedances for all electrodes, or None if impedances are not available.
     """
+    fname = _validate_fname(fname, ".bvri")
+
     lines = Path(fname).read_text(encoding="utf-8-sig").splitlines()
 
     # find participant ID, electrode, and impedance measurement lines
@@ -244,3 +250,38 @@ def _read_bvri(fname, ch_names):
             result[ch_name] = float(value)
 
     return result if result else None
+
+
+def _validate_fname(fname, extensions):
+    """Validate and normalize BVRF file path.
+
+    Parameters
+    ----------
+    fname : str | Path
+        Path to the BVRF file.
+    extensions : str | list of str
+        Expected file extension (e.g., ".bvrh") or list of allowed extensions.
+
+    Returns
+    -------
+    Path
+        Normalized path with the expected extension (if single extension provided) or
+        without extension (if list of extensions provided).
+
+    Raises
+    ------
+    ValueError
+        If fname does not have an allowed extension.
+    """
+    fname = Path(fname).expanduser().resolve()
+
+    if isinstance(extensions, str):
+        if fname.suffix not in (extensions, ""):
+            raise ValueError(
+                f"Invalid file extension {fname.suffix} (expected {extensions})"
+            )
+        return fname.with_suffix(extensions)
+    else:
+        if fname.suffix not in (*extensions, ""):
+            raise ValueError(f"Invalid file extension {fname.suffix}")
+        return fname.with_suffix("")
