@@ -1,0 +1,550 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://www.brainproducts.com/schemas/json/BVRF/BVRFHeader-1.0.0.json",
+  "title": "BVRFSchema",
+  "description": "Whitespaces within strings are allowed, e.g. \"Fp1\" and \"Fp 1\" are allowed, but different; likewise \"AUX1\" and \"AUX 1\" are allowed, but different. One common principle in the file is that if there is only one amplifier and/or only one participant, then the AmplifierId and ParticipantId can be omitted everywhere.",
+  "type": "object",
+  "required": [ "BVRF", "BVRFHeaderFile", "EEGModality" ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "BVRF": { "$ref": "#/definitions/ObjectWithOnlyFileVersion" },
+    "BVRFHeaderFile": { "$ref": "#/definitions/ObjectWithOnlyFileVersion" },
+    "RecordingSoftware": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "Name": { "type": [ "string", "null" ] },
+        "Version": { "type": [ "string", "null" ] }
+      }
+    },
+    "EEGModality": {
+      "description": "Description of data from EEG (e.g. EEG, ECG, EOG, EMG and/or sensors) recording.",
+      "type": "object",
+      "required": [ "BVRFFiles", "DataSpecific", "Channels" ],
+      "additionalProperties": false,
+      "properties": {
+        "BVRFFiles": {
+          "type": "object",
+          "required": [ "DataFile", "MarkerFile" ],
+          "additionalProperties": false,
+          "properties": {
+            "DataFile": {
+              "type": "object",
+              "required": [ "Version", "NumericDataType"],
+              "additionalProperties": false,
+              "properties": {
+                "Version": { "$ref": "#/definitions/FileVersionProperties" },
+                "NumericDataType": { "enum": [ "Single", "Double", "Int16", "Int32" ] }
+              }
+            },
+            "MarkerFile": { "$ref": "#/definitions/ObjectWithOnlyFileVersion" },
+            "ImpedanceFile": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "description": "Constraint: Required if at least one impedance measurement was performed.",
+                  "type": "object",
+                  "required": [ "Version" ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "Version": { "$ref": "#/definitions/FileVersionProperties" }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "DataSpecific": {
+          "type": "object",
+          "required": [ "SamplingFrequencyInHertz" ],
+          "additionalProperties": false,
+          "properties": {
+            "SamplingFrequencyInHertz": {
+              "type": "number",
+              "exclusiveMinimum": 0.0
+            },
+            "PowerLineFrequencyInHertz": {
+              "type": [ "number", "null" ],
+              "exclusiveMinimum": 0.0
+            }
+          }
+        },
+        "Caps": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "CapManufacturer": { "type": [ "string", "null" ] },
+                  "CapManufacturersModelName": { "type": [ "string", "null" ] },
+                  "EEGPlacementScheme": { "type": [ "string", "null" ] },
+                  "ParticipantId": {
+                    "descritpion": "Constraint: Required if more than one participant",
+                    "type": [ "string", "null" ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "Amplifiers": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "description": "Recommended if more than one amplifier is used. It is assumed that one amplifier has max. one GND and max. one REF (pure bipolar amplifiers do not have a REF)",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "Id": {
+                    "description": "Constraint: Required if more than one amplifier is used",
+                    "type": "string"
+                  },
+                  "Model": { "type": [ "string", "null" ] },
+                  "SerialNumber": { "type": [ "string", "null" ] }
+                }
+              }
+            }
+          ]
+        },
+        "CoordinateSystems": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "EEGCoordinateSystem": {
+                  "description": "Constraint: Required if coord. for EEG exist.",
+                  "enum": [ "CapTrak", "MNI", "Easycap", null ]
+                },
+                "EEGCoordinateUnit": {
+                  "description": "Constraint: Required if coord. for EEG exist.",
+                  "enum": [ "mm", null ]
+                },
+                "EEGCoordinateSystemDescription": { "type": [ "string", "null" ] },
+                "EEGCoordinateSystemSource": { "type": [ "string", "null" ] },
+                "FiducialsCoordinateSystem": {
+                  "description": "Constraint: Required if coord. for Fiducials exist.",
+                  "enum": [ "CapTrak", "MNI", "Easycap", null ]
+                },
+                "FiducialsCoordinateUnit": {
+                  "description": "Constraint: Required if coord. for Fiducials exist.",
+                  "enum": [ "mm", null ]
+                },
+                "FiducialsCoordinateSystemDescription": { "type": [ "string", "null" ] },
+                "FiducialsCoordinateSource": { "type": [ "string", "null" ] },
+                "AnatomicalLandmarksCoordinateSystem": {
+                  "description": "Constraint: Required if coord. for Anat. Landmarks exist.",
+                  "enum": [ "CapTrak", "MNI", "Easycap", null ]
+                },
+                "AnatomicalLandmarksCoordinateUnit": {
+                  "description": "Constraint: Required if coord. for Anat. Landmarks exist.",
+                  "enum": [ "mm", null ]
+                },
+                "AnatomicalLandmarksCoordinateSystemDescription": { "type": [ "string", "null" ] },
+                "AnatomicalLandmarksCoordinateSource": { "type": [ "string", "null" ] }
+              }
+            }
+          ]
+        },
+        "Electrodes": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "description": "Constraint: Required if at least one channel with electrodes exist. Electrodes are info on single electrodes (including the ones needed for reference(s), ground(s) as well as EPPreAmps and BIP2AUX).",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [ "Name" ],
+                "properties": {
+                  "Name": {
+                    "description": "Constraint: Tabulators are not allowed. With multiple subjects, the same name can exist multiple times.",
+                    "type": "string"
+                  },
+                  "Type": {
+                    "description": "e.g. cup, ring, clip-on, wire, needle",
+                    "type": [ "string", "null" ]
+                  },
+                  "Material": {
+                    "description": "Electrode pellet material, e.g. Ag/AgCl, Gold, Tin",
+                    "type": [ "string", "null" ]
+                  },
+                  "ParticipantId": { "type": [ "string", "null" ] },
+                  "PhysicalInput": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [ "Id" ],
+                    "properties": {
+                      "Id": { "type": "string" },
+                      "AmplifierId": { "type": [ "string", "null" ] }
+                    }
+                  },
+                  "ElectrodeCategory": { "enum": [ "Active", "Passive", null ] },
+                  "MRProtectionResistorInKiloOhm": {
+                    "type": [ "number", "null" ],
+                    "exclusiveMinimum": 0.0
+                  },
+                  "Coordinates": {
+                    "oneOf": [
+                      { "type": "null" },
+                      {
+                        "description": "For BIP2AUX electrodes there are no coordinates",
+                        "$ref": "#/definitions/Coordinates"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "Fiducials": { "$ref": "#/definitions/CartesianCoordinatesArray" },
+        "AnatomicalLandmarks": { "$ref": "#/definitions/CartesianCoordinatesArray" },
+        "Sensors": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "description": "Sensors are everything that is connected to AUX inputs (plus more, e.g. SpO2 sensor). Includes BIP2AUX, even if BIP2AUX sensor has normal electrodes (Note: GSR sensor also has electrodes, but special ones)",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [ "Name" ],
+                "additionalProperties": false,
+                "properties": {
+                  "ParticipantId": {
+                    "description": "Constraint: Required only if more than one participant.",
+                    "type": [ "string", "null" ]
+                  },
+                  "Name": {
+                    "description": "Constraint: 'ParticipantId – Name' pair must be unique",
+                    "type": "string"
+                  },
+                  "PhysicalInputs": {
+                    "type": "object",
+                    "required": [ "Ids" ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "AmplifierId": {
+                        "description": "Constraint: Required only if more than one amplifier.",
+                        "type": [ "string", "null" ]
+                      },
+                      "Ids": {
+                        "description": "Name(s) of amplifier input(s)",
+                        "type": "array",
+                        "minItems": 1,
+                        "items": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "References": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/definitions/RefGroundDefinition" }
+          ]
+        },
+        "Grounds": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/definitions/RefGroundDefinition" }
+          ]
+        },
+        "Filters": {
+          "description": "Info about analog and/or digital filters; OPTIONAL because it is often available for the amplifier, and its presence may unnecessarily increase the size of the header file. If not specified then either unknown or not applied.",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [ "Id", "Type" ],
+                "additionalProperties": false,
+                "if": {
+                  "oneOf": [
+                    {
+                      "properties": {
+                        "Type": { "const": "Bandpass" }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "Type": { "const": "Bandstop" }
+                      }
+                    }
+                  ]
+                },
+                "then": { "required": [ "FrequenciesInHertz" ] },
+                "else": { "required": [ "FrequencyInHertz" ] },
+                "properties": {
+                  "Id": { "type": "string" },
+                  "FrequenciesInHertz": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "FrequencyInHertz": {
+                    "type": "number",
+                    "exclusiveMinimum": 0.0
+                  },
+                  "Type": { "enum": [ "Lowpass", "Highpass", "Notch", "Bandpass", "Bandstop" ] },
+                  "Order": {
+                    "type": [ "integer", "null" ],
+                    "exclusiveMinimum": 0
+                  },
+                  "Domain": { "enum": [ "Analog", "Digital" ] },
+                  "Other": {
+                    "oneOf": [
+                      { "type": "null" },
+                      { "$ref": "#/definitions/StringDictionary" }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "Channels": {
+          "description": "The order of channels in this section corresponds to the data in the raw data file.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [ "Name", "Type", "Unit", "ResolutionPerBit" ],
+            "additionalProperties": false,
+            "properties": {
+              "ParticipantId": {
+                "description": "Mandatory if more than one participant.",
+                "type": [ "string", "null" ]
+              },
+              "Name": {
+                "description": "Constraint: The union of all {ParticipantId + Name} of References, Grounds and Channels cannot have duplicates. Tabulators are not allowed. Info: Name can be Fp1-REF but also only Fp1, because Composition explains the details.",
+                "type": "string"
+              },
+              "Type": {
+                "description": "e.g. EEG, GSR, MISC etc.",
+                "type": "string"
+              },
+              "Unit": {
+                "description": "Unit after considering ResolutionPerBit and Coefficients.",
+                "type": "string"
+              },
+              "Composition": {
+                "description": "Constraint: Required if composition exists.",
+                "type": "object",
+                "required": [ "Plus" ],
+                "additionalProperties": false,
+                "properties": {
+                  "Plus": { "$ref": "#/definitions/PlusMinus" },
+                  "Minus": { "$ref": "#/definitions/PlusMinus" }
+                }
+              },
+              "ResolutionPerBit": {
+                "default": 1.0,
+                "type": "number"
+              },
+              "ResolutionUnit": { "type": "string" },
+              "Coefficients": {
+                "oneOf": [
+                  { "type": "null" },
+                  {
+                    "description": "Rational polynomial function F where Num contains the numerator and Denom the denominator coefficients. F(y) = (Num_0+Num_1*y+Num_2*y^2+...+Num_K*y^K)/(Denom_0+Denom_1*y+Denom_2*y^2+...+Denom_J*y^J). Resulted unit is as in \"Unit\" under \"Channels\" section.",
+                    "default": "Num:[0.0, 1.0], Denom: [1.0]",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "Num": { "$ref": "#/definitions/OptionalNumberArray" },
+                      "Denom": { "$ref": "#/definitions/OptionalNumberArray" }
+                    }
+                  }
+                ]
+              },
+              "FilterIds": {
+                "oneOf": [
+                  { "type": "null" },
+                  {
+                    "description": "If not specified then either unknown or not applied.",
+                    "type": "array",
+                    "items": {
+                      "description": "Constraint: Ids must contain a value from Filters.Id.",
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "Institution": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Name": { "type": [ "string", "null" ] },
+            "Address": { "type": [ "string", "null" ] },
+            "Department": { "type": [ "string", "null" ] }
+          }
+        }
+      ]
+    },
+    "Task": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Name": { "type": [ "string", "null" ] },
+            "Description": { "type": [ "string", "null" ] },
+            "Instructions": { "type": [ "string", "null" ] }
+          }
+        }
+      ]
+    },
+    "Participants": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "Id": { "type": "string" },
+              "HeadCircumferenceInCentiMeter": { "type": [ "number", "null" ] },
+              "ArtefactDescription": { "type": [ "string", "null" ] }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "FileVersionProperties": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "ObjectWithOnlyFileVersion": {
+      "type": "object",
+      "required": [ "Version" ],
+      "additionalProperties": false,
+      "properties": {
+        "Version": { "$ref": "#/definitions/FileVersionProperties" }
+      }
+    },
+    "Coordinates": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      }
+    },
+    "CoordinateDictionary": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/Coordinates"
+      }
+    },
+    "CartesianCoordinatesArray": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [ "Coordinates" ],
+            "properties": {
+              "ParticipantId": {
+                "descritpion": "Constraint: Required if more than one participant",
+                "type": [ "string", "null" ]
+              },
+              "Coordinates": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/definitions/Coordinates"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "RefGroundDefinition": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [ "Name" ],
+        "additionalProperties": false,
+        "properties": {
+          "ParticipantId": {
+            "description": "Constraint: Required only if more than one participant.",
+            "type": [ "string", "null" ]
+          },
+          "Name": {
+            "description": "Constraint: The union of all {ParticipantId + Name} of References, Grounds and Channels cannot have duplicates.",
+            "type": "string"
+          },
+          "Composition": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [ "Name" ],
+              "additionalProperties": false,
+              "properties": {
+                "Name": { "type": "string" },
+                "Factor": {
+                  "default": "1.0",
+                  "exclusiveMinimum": 0.0,
+                  "type": [ "number", "null" ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "StringDictionary": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "PlusMinus": {
+      "type": "object",
+      "required": [ "Name" ],
+      "additionalProperties": false,
+      "properties": {
+        "Name": { "type": "string" },
+        "Section": {
+          "default": "Electrodes",
+          "enum": [ "Electrodes", "Sensors", "References", "Grounds", null ]
+        }
+      }
+    },
+    "OptionalNumberArray": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "array",
+          "items": { "type": "number" },
+          "default": "[1.0]",
+          "minItems": 1
+        }
+      ]
+    }
+  }
+}

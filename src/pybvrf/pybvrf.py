@@ -2,6 +2,7 @@ import json
 import re
 from pathlib import Path
 
+import jsonschema
 import numpy as np
 
 
@@ -115,6 +116,13 @@ def _read_bvrh(fname):
 
     with open(fname, "r", encoding="utf-8-sig") as f:
         header = json.load(f)
+
+    with open(Path(__file__).parent / "BVRFHeader-1.0.0.json") as f:
+        schema = json.load(f)
+    try:
+        jsonschema.validate(instance=header, schema=schema)
+    except jsonschema.ValidationError as e:
+        raise ValueError(f"BVRF header validation failed: {e.message}") from e
 
     DTYPES = {
         "Int16": np.int16,
