@@ -62,7 +62,7 @@ def read_bvrf(fname):
     """
     fname = _validate_fname(fname, [".bvrh", ".bvrd", ".bvrm", ".bvri"])
 
-    header = _read_bvrh(fname.with_suffix(".bvrh"))
+    header = read_bvrf_header(fname.with_suffix(".bvrh"))
 
     data = _read_bvrd(
         fname.with_suffix(".bvrd"),
@@ -83,7 +83,7 @@ def read_bvrf(fname):
     return header, data, markers, impedances
 
 
-def _read_bvrh(fname):
+def read_bvrf_header(fname):
     """Read BVRF header file.
 
     Parameters
@@ -108,7 +108,7 @@ def _read_bvrh(fname):
 
     Examples
     --------
-    >>> header = _read_bvrh("recording.bvrh")
+    >>> header = read_bvrf_header("recording.bvrh")
     >>> print(header["n_participants"])
     >>> print(header["ch_names"])
     """
