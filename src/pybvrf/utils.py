@@ -30,8 +30,7 @@ def split_participants(header, data, markers, impedances):
     n_participants = header["n_participants"]
 
     if n_participants == 1:
-        pid = header["yaml_header"]["Participants"][0]["Id"]
-        return {pid: (header, data, markers, impedances)}
+        return {"P1": (header, data, markers, impedances)}
 
     participant_ids = [p["Id"] for p in header["yaml_header"]["Participants"]]
 

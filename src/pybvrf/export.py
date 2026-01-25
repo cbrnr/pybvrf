@@ -59,6 +59,7 @@ class RawBVRF(BaseRaw):
         ]
         info = create_info(ch_names=header["ch_names"], sfreq=fs, ch_types=ch_types)
 
+        kwargs.pop("preload", None)  # preload is not supported as a kwarg here
         super().__init__(
             preload=data,
             info=info,
@@ -102,7 +103,11 @@ def read_raw_bvrf(fname, participants=None, split=False, *args, **kwargs):
     header, data, markers, _ = read_bvrf(fname)
 
     # get available participant IDs
-    all_pids = [p["Id"] for p in header["yaml_header"]["Participants"]]
+    if "Participants" in header["yaml_header"]:
+        all_pids = [p["Id"] for p in header["yaml_header"]["Participants"]]
+    else:
+        # single participant recording without explicit participant list
+        all_pids = ["P1"]
 
     # normalize and validate participants parameter
     if participants is not None:
