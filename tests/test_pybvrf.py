@@ -10,10 +10,13 @@ def test_validate_fname():
 
     # multiple valid extensions returns the filename without extension
     assert _validate_fname("file.bvrf", [".bvrf", ".bvrh"]).name == "file"
+    assert _validate_fname("file", [".bvrf", ".bvrh"]).name == "file"
 
     with pytest.raises(ValueError):
-        # invalid extension raises ValueError
-        _validate_fname("file.BVRF", ".bvrf")
-        _validate_fname("file.xyz", ".bvrf")
-        _validate_fname("file.bvrf", [".bvrh", ".bvri"])
-        _validate_fname("file", [".bvrf", ".bvrh"])
+        _validate_fname("file.BVRF", ".bvrf")  # case-sensitive
+    
+    with pytest.raises(ValueError):
+        _validate_fname("file.xyz", ".bvrf")  # invalid extension
+    
+    with pytest.raises(ValueError):
+        _validate_fname("file.bvrf", [".bvrh", ".bvri"])  # invalid extension
