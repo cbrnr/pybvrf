@@ -76,7 +76,7 @@ class RawBVRF(BaseRaw):
         )
 
 
-def read_raw_bvrf(fname, split=False, *args, **kwargs):
+def read_raw_bvrf(fname, participants=None, *args, **kwargs):
     """Read BrainVision Recording Format (BVRF) recording.
 
     Parameters
@@ -84,21 +84,47 @@ def read_raw_bvrf(fname, split=False, *args, **kwargs):
     fname : str | Path
         Path to the BVRF file (either without extension or one of `.bvrh`, `.bvrd`,
         `.bvrm`, or `.bvri`).
-    split : bool, optional
-        If True, split multi-participant recordings into separate RawBVRF objects (one
-        per participant). Default is False.
+    participants : None | str | list of str, optional
+        Which participants to load. If None, all participants are loaded into a single
+        dataset. If a participant ID (e.g., "P1") or a list of participant IDs, the data
+        is split and the requested participants are returned as separate RawBVRF
+        objects.
 
     Returns
     -------
     RawBVRF | list of RawBVRF
-        The raw data object (if `split` is False) or a list of raw data objects (if
-        `split` is True).
+        The raw data object (if `participants` is None) or a list of raw data objects
+        (one per requested participant if `participants` is specified).
     """
     header, data, markers, _ = read_bvrf(fname)
-    if split and header["n_participants"] > 1:
-        participants = split_participants(header, data, markers, None)
+
+    if participants is not None and header["n_participants"] > 1:
+        if isinstance(participants, str):
+            participants = [participants]
+
+        if not participants or any(not pid for pid in participants):
+            raise ValueError(
+                "Participant list cannot be empty and must contain non-empty IDs"
+            )
+
+        all_participants = split_participants(header, data, markers, None)
+
+        pids = [p["Id"] for p in header["yaml_header"]["Participants"]]
+
+        if invalid_pids := [pid for pid in participants if pid not in pids]:
+            raise ValueError(
+                f"Invalid participant ID(s): {invalid_pids}. Available participants: "
+                f"{pids}"
+            )
+
+        selected = []
+        for pid, (p_header, p_data, p_markers, _) in zip(pids, all_participants):
+            if pid in participants:
+                selected.append((p_header, p_data, p_markers, None))
+
         return [
             RawBVRF.from_data(p_header, p_data, p_markers, *args, **kwargs)
-            for p_header, p_data, p_markers, _ in participants
+            for p_header, p_data, p_markers, _ in selected
         ]
+
     return RawBVRF.from_data(header, data, markers, *args, **kwargs)
