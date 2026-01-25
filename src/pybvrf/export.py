@@ -77,7 +77,7 @@ class RawBVRF(BaseRaw):
         )
 
 
-def read_raw_bvrf(fname, participants=None, split=True, *args, **kwargs):
+def read_raw_bvrf(fname, participants=None, split=False, *args, **kwargs):
     """Read BrainVision Recording Format (BVRF) recording.
 
     Parameters
@@ -86,26 +86,26 @@ def read_raw_bvrf(fname, participants=None, split=True, *args, **kwargs):
         Path to the BVRF file (either without extension or one of `.bvrh`, `.bvrd`,
         `.bvrm`, or `.bvri`).
     participants : None | str | list of str, optional
-        Which participants to load. If None, all participants are loaded into a single
-        dataset. If a participant ID (e.g., "P1") or a list of participant IDs, the data
-        is split and the requested participants are returned as separate RawBVRF
-        objects (if `split=True`) or combined into a single RawBVRF object (if
-        `split=False`).
+        Which participants to load. If None, all participants are loaded. If a
+        participant ID (e.g., "P1") or a list of participant IDs, only the specified
+        participants are loaded.
     split : bool, optional
-        If True (default), return separate RawBVRF objects for each requested
-        participant. If False, combine the data of all requested participants into a
-        single RawBVRF object. Only applies when `participants` is specified.
+        If False, combine the data into a single RawBVRF object. If True, return
+        separate RawBVRF objects for each participant in a dict.
 
     Returns
     -------
     RawBVRF | dict of RawBVRF
-        The raw data object (if `participants` is None or `split=False`) or a dict of
-        raw data objects with PID as keys (one per requested participant if
-        `participants` is specified and `split=True`).
+        The raw data object (if `split=False`) or a dict of raw data objects with PID
+        as keys (if `split=True`).
     """
     header, data, markers, _ = read_bvrf(fname)
 
-    if participants is not None and header["n_participants"] > 1:
+    # get available participant IDs
+    all_pids = [p["Id"] for p in header["yaml_header"]["Participants"]]
+
+    # normalize and validate participants parameter
+    if participants is not None:
         if isinstance(participants, str):
             participants = [participants]
 
@@ -114,22 +114,22 @@ def read_raw_bvrf(fname, participants=None, split=True, *args, **kwargs):
                 "Participant list cannot be empty and must contain non-empty IDs"
             )
 
-        # validate participant IDs
-        available_pids = [p["Id"] for p in header["yaml_header"]["Participants"]]
-        if invalid_pids := [pid for pid in participants if pid not in available_pids]:
+        if invalid_pids := [pid for pid in participants if pid not in all_pids]:
             raise ValueError(
                 f"Invalid participant ID(s): {invalid_pids}. Available participants: "
-                f"{available_pids}"
+                f"{all_pids}"
             )
+    else:
+        participants = all_pids
 
-        if split:
-            participant_data = split_participants(header, data, markers, None)
-            return {
-                pid: RawBVRF.from_data(*participant_data[pid][:3], *args, **kwargs)
-                for pid in participants
-            }
-        else:
-            # filter channels for selected participants without splitting
+    if split:
+        participant_data = split_participants(header, data, markers, None)
+        return {
+            pid: RawBVRF.from_data(*participant_data[pid][:3], *args, **kwargs)
+            for pid in participants
+        }
+    else:
+        if header["n_participants"] > 1 and set(participants) != set(all_pids):
             ch_indices = [
                 i
                 for i, ch_name in enumerate(header["ch_names"])
@@ -151,4 +151,4 @@ def read_raw_bvrf(fname, participants=None, split=True, *args, **kwargs):
                 filtered_header, filtered_data, markers, *args, **kwargs
             )
 
-    return RawBVRF.from_data(header, data, markers, *args, **kwargs)
+        return RawBVRF.from_data(header, data, markers, *args, **kwargs)
