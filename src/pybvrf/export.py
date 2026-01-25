@@ -7,7 +7,8 @@
 from mne import create_info
 from mne.io import BaseRaw, get_channel_type_constants
 
-from pybvrf.pybvrf import read_bvrf, split_participants
+from pybvrf.pybvrf import read_bvrf
+from pybvrf.utils import _is_participant_channel, split_participants
 
 
 class RawBVRF(BaseRaw):
@@ -76,7 +77,7 @@ class RawBVRF(BaseRaw):
         )
 
 
-def read_raw_bvrf(fname, participants=None, *args, **kwargs):
+def read_raw_bvrf(fname, participants=None, split=True, *args, **kwargs):
     """Read BrainVision Recording Format (BVRF) recording.
 
     Parameters
@@ -88,13 +89,19 @@ def read_raw_bvrf(fname, participants=None, *args, **kwargs):
         Which participants to load. If None, all participants are loaded into a single
         dataset. If a participant ID (e.g., "P1") or a list of participant IDs, the data
         is split and the requested participants are returned as separate RawBVRF
-        objects.
+        objects (if `split=True`) or combined into a single RawBVRF object (if
+        `split=False`).
+    split : bool, optional
+        If True (default), return separate RawBVRF objects for each requested
+        participant. If False, combine the data of all requested participants into a
+        single RawBVRF object. Only applies when `participants` is specified.
 
     Returns
     -------
     RawBVRF | dict of RawBVRF
-        The raw data object (if `participants` is None) or a dict of raw data objects
-        with PID as keys (one per requested participant if `participants` is specified).
+        The raw data object (if `participants` is None or `split=False`) or a dict of
+        raw data objects with PID as keys (one per requested participant if
+        `participants` is specified and `split=True`).
     """
     header, data, markers, _ = read_bvrf(fname)
 
@@ -107,17 +114,41 @@ def read_raw_bvrf(fname, participants=None, *args, **kwargs):
                 "Participant list cannot be empty and must contain non-empty IDs"
             )
 
-        participant_data = split_participants(header, data, markers, None)
-
-        if invalid_pids := [pid for pid in participants if pid not in participant_data]:
+        # validate participant IDs
+        available_pids = [p["Id"] for p in header["yaml_header"]["Participants"]]
+        if invalid_pids := [pid for pid in participants if pid not in available_pids]:
             raise ValueError(
                 f"Invalid participant ID(s): {invalid_pids}. Available participants: "
-                f"{list(participant_data.keys())}"
+                f"{available_pids}"
             )
 
-        return {
-            pid: RawBVRF.from_data(*participant_data[pid][:3], *args, **kwargs)
-            for pid in participants
-        }
+        if split:
+            participant_data = split_participants(header, data, markers, None)
+            return {
+                pid: RawBVRF.from_data(*participant_data[pid][:3], *args, **kwargs)
+                for pid in participants
+            }
+        else:
+            # filter channels for selected participants without splitting
+            ch_indices = [
+                i
+                for i, ch_name in enumerate(header["ch_names"])
+                if any(_is_participant_channel(ch_name, pid) for pid in participants)
+            ]
+
+            filtered_header = header.copy()
+            filtered_header["n_channels"] = len(ch_indices)
+            filtered_header["ch_names"] = [header["ch_names"][i] for i in ch_indices]
+            filtered_header["ch_types"] = [header["ch_types"][i] for i in ch_indices]
+            filtered_header["ch_units"] = [header["ch_units"][i] for i in ch_indices]
+            filtered_header["ch_resolutions"] = [
+                header["ch_resolutions"][i] for i in ch_indices
+            ]
+
+            filtered_data = data[ch_indices, :]
+
+            return RawBVRF.from_data(
+                filtered_header, filtered_data, markers, *args, **kwargs
+            )
 
     return RawBVRF.from_data(header, data, markers, *args, **kwargs)
