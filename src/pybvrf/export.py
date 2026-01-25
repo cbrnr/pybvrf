@@ -1,3 +1,9 @@
+# © Clemens Brunner
+#
+# License: BSD (3-clause)
+
+"""Module for reading BrainVision Recording Format (BVRF) files into MNE-Python."""
+
 from mne import create_info
 from mne.io import BaseRaw, get_channel_type_constants
 
@@ -52,7 +58,7 @@ class RawBVRF(BaseRaw):
         ]
         info = create_info(ch_names=header["ch_names"], sfreq=fs, ch_types=ch_types)
 
-        super(RawBVRF, self).__init__(
+        super().__init__(
             preload=data,
             info=info,
             filenames=[str(header["fname"].with_suffix(".bvrh"))],

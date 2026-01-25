@@ -1,3 +1,9 @@
+# © Clemens Brunner
+#
+# License: BSD (3-clause)
+
+"""Module for reading BrainVision Recording Format (BVRF) files."""
+
 import json
 import re
 from pathlib import Path
@@ -114,7 +120,7 @@ def read_bvrf_header(fname):
     """
     fname = _validate_fname(fname, ".bvrh")
 
-    with open(fname, "r", encoding="utf-8-sig") as f:
+    with open(fname, encoding="utf-8-sig") as f:
         header = json.load(f)
 
     with open(Path(__file__).parent / "BVRFHeader-1.0.0.json") as f:

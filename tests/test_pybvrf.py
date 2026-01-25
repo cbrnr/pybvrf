@@ -1,3 +1,7 @@
+# © Clemens Brunner
+#
+# License: BSD (3-clause)
+
 import pytest
 
 from pybvrf.pybvrf import _validate_fname
@@ -14,9 +18,9 @@ def test_validate_fname():
 
     with pytest.raises(ValueError):
         _validate_fname("file.BVRF", ".bvrf")  # case-sensitive
-    
+
     with pytest.raises(ValueError):
         _validate_fname("file.xyz", ".bvrf")  # invalid extension
-    
+
     with pytest.raises(ValueError):
         _validate_fname("file.bvrf", [".bvrh", ".bvri"])  # invalid extension
