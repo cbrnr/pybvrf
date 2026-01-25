@@ -260,6 +260,115 @@ def _read_bvri(fname, ch_names):
     return result if result else None
 
 
+def split_participants(header, data, markers, impedances):
+    """Split multi-participant recording into individual participant recordings.
+
+    Parameters
+    ----------
+    header : dict
+        Header information.
+    data : ndarray, shape (n_channels, n_samples)
+        EEG data.
+    markers : ndarray
+        Markers.
+    impedances : dict | None
+        Impedances.
+
+    Returns
+    -------
+    list of tuple
+        List of (header, data, markers, impedances) tuples, one per participant. If the
+        recording has only one participant, returns a list with a single tuple.
+
+    Notes
+    -----
+    For multi-participant recordings, channel names include the participant ID in
+    parentheses (e.g., "Fz (P1)", "Cz (P2)"). This function splits the recording by
+    extracting channels for each participant and creating separate headers.
+    """
+    n_participants = header["n_participants"]
+
+    if n_participants == 1:
+        return [(header, data, markers, impedances)]
+
+    # extract participant IDs from channel names
+    participant_ids = []
+    for ch_name in header["ch_names"]:
+        # extract participant ID from format "Name (PID)"
+        match = re.match(r".+\((.+)\)$", ch_name)
+        if match:
+            pid = match.group(1)
+            if pid not in participant_ids:
+                participant_ids.append(pid)
+
+    if not participant_ids:
+        raise ValueError("Could not extract participant IDs from channel names")
+
+    results = []
+    for pid in participant_ids:
+        # find channels for this participant (specific to PID or common to all)
+        ch_indices = []
+        for i, ch_name in enumerate(header["ch_names"]):
+            if _is_participant_channel(ch_name, pid):
+                ch_indices.append(i)
+
+        # create new header for this participant
+        participant_header = header.copy()
+        participant_header["n_participants"] = 1
+        participant_header["n_channels"] = len(ch_indices)
+        participant_header["ch_names"] = [
+            re.sub(r"\s*\(.+\)$", "", header["ch_names"][i]) for i in ch_indices
+        ]
+        participant_header["ch_types"] = [header["ch_types"][i] for i in ch_indices]
+        participant_header["ch_units"] = [header["ch_units"][i] for i in ch_indices]
+        participant_header["ch_resolutions"] = [
+            header["ch_resolutions"][i] for i in ch_indices
+        ]
+
+        # filter impedances for this participant
+        participant_impedances = None
+        if impedances is not None:
+            participant_impedances = {}
+            for ch_name, value in impedances.items():
+                if _is_participant_channel(ch_name, pid):
+                    # remove participant ID suffix from channel name
+                    participant_impedances[re.sub(r"\s*\(.+\)$", "", ch_name)] = value
+            if not participant_impedances:
+                participant_impedances = None
+
+        results.append(
+            (
+                participant_header,
+                data[ch_indices, :],
+                markers,
+                participant_impedances,
+            )
+        )
+
+    return results
+
+
+def _is_participant_channel(ch_name, participant_id):
+    """Check if a channel belongs to a specific participant.
+
+    Parameters
+    ----------
+    ch_name : str
+        Channel name, possibly with participant ID suffix (e.g., "Fz (P1)").
+    participant_id : str
+        Participant ID to check for.
+
+    Returns
+    -------
+    bool
+        True if the channel belongs to the participant (either specific to that
+        participant or common to all participants).
+    """
+    is_participant_channel = re.search(rf"\({re.escape(participant_id)}\)$", ch_name)
+    is_common_channel = not re.search(r"\(.+\)$", ch_name)
+    return bool(is_participant_channel or is_common_channel)
+
+
 def _validate_fname(fname, extensions):
     """Validate and normalize BVRF file path.
 
