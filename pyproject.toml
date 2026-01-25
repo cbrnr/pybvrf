@@ -11,3 +11,8 @@ dependencies = [
     "mne>=1.11.0",
     "numpy>=2.2.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]

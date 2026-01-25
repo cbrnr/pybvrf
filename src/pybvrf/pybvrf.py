@@ -280,6 +280,11 @@ def _validate_fname(fname, extensions):
     ------
     ValueError
         If fname does not have an allowed extension.
+    
+    Notes
+    -----
+    If a single extension is provided, fname must either have that extension or no
+    extension (in which case the extension is added to the return value).
     """
     fname = Path(fname).expanduser().resolve()
 
@@ -290,6 +295,6 @@ def _validate_fname(fname, extensions):
             )
         return fname.with_suffix(extensions)
     else:
-        if fname.suffix not in (*extensions, ""):
+        if fname.suffix not in extensions:
             raise ValueError(f"Invalid file extension {fname.suffix}")
         return fname.with_suffix("")
