@@ -92,9 +92,9 @@ def read_raw_bvrf(fname, participants=None, *args, **kwargs):
 
     Returns
     -------
-    RawBVRF | list of RawBVRF
-        The raw data object (if `participants` is None) or a list of raw data objects
-        (one per requested participant if `participants` is specified).
+    RawBVRF | dict of RawBVRF
+        The raw data object (if `participants` is None) or a dict of raw data objects
+        with PID as keys (one per requested participant if `participants` is specified).
     """
     header, data, markers, _ = read_bvrf(fname)
 
@@ -107,24 +107,17 @@ def read_raw_bvrf(fname, participants=None, *args, **kwargs):
                 "Participant list cannot be empty and must contain non-empty IDs"
             )
 
-        all_participants = split_participants(header, data, markers, None)
+        participant_data = split_participants(header, data, markers, None)
 
-        pids = [p["Id"] for p in header["yaml_header"]["Participants"]]
-
-        if invalid_pids := [pid for pid in participants if pid not in pids]:
+        if invalid_pids := [pid for pid in participants if pid not in participant_data]:
             raise ValueError(
                 f"Invalid participant ID(s): {invalid_pids}. Available participants: "
-                f"{pids}"
+                f"{list(participant_data.keys())}"
             )
 
-        selected = []
-        for pid, (p_header, p_data, p_markers, _) in zip(pids, all_participants):
-            if pid in participants:
-                selected.append((p_header, p_data, p_markers, None))
-
-        return [
-            RawBVRF.from_data(p_header, p_data, p_markers, *args, **kwargs)
-            for p_header, p_data, p_markers, _ in selected
-        ]
+        return {
+            pid: RawBVRF.from_data(*participant_data[pid][:3], *args, **kwargs)
+            for pid in participants
+        }
 
     return RawBVRF.from_data(header, data, markers, *args, **kwargs)

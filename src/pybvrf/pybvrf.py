@@ -282,35 +282,19 @@ def split_participants(header, data, markers, impedances):
 
     Returns
     -------
-    list of tuple
-        List of (header, data, markers, impedances) tuples, one per participant. If the
-        recording has only one participant, returns a list with a single tuple.
-
-    Notes
-    -----
-    For multi-participant recordings, channel names include the participant ID in
-    parentheses (e.g., "Fz (P1)", "Cz (P2)"). This function splits the recording by
-    extracting channels for each participant and creating separate headers.
+    dict
+        Dict with PID as keys and (header, data, markers, impedances) tuples as values,
+        one per participant. If the recording has only one participant.
     """
     n_participants = header["n_participants"]
 
     if n_participants == 1:
-        return [(header, data, markers, impedances)]
+        pid = header["yaml_header"]["Participants"][0]["Id"]
+        return {pid: (header, data, markers, impedances)}
 
-    # extract participant IDs from channel names
-    participant_ids = []
-    for ch_name in header["ch_names"]:
-        # extract participant ID from format "Name (PID)"
-        match = re.match(r".+\((.+)\)$", ch_name)
-        if match:
-            pid = match.group(1)
-            if pid not in participant_ids:
-                participant_ids.append(pid)
+    participant_ids = [p["Id"] for p in header["yaml_header"]["Participants"]]
 
-    if not participant_ids:
-        raise ValueError("Could not extract participant IDs from channel names")
-
-    results = []
+    results = {}
     for pid in participant_ids:
         # find channels for this participant (specific to PID or common to all)
         ch_indices = []
@@ -342,13 +326,11 @@ def split_participants(header, data, markers, impedances):
             if not participant_impedances:
                 participant_impedances = None
 
-        results.append(
-            (
-                participant_header,
-                data[ch_indices, :],
-                markers,
-                participant_impedances,
-            )
+        results[pid] = (
+            participant_header,
+            data[ch_indices, :],
+            markers,
+            participant_impedances,
         )
 
     return results
