@@ -25,18 +25,21 @@ def split_participants(header, data, markers, impedances):
     -------
     dict
         Dict with PID as keys and (header, data, markers, impedances) tuples as values,
-        one per participant. If the recording has only one participant.
-    """
-    n_participants = header["n_participants"]
+        one per participant.
 
-    if n_participants == 1:
-        return {"P1": (header, data, markers, impedances)}
+    Raises
+    ------
+    ValueError
+        If the recording has only one participant.
+    """
+    if header["n_participants"] == 1:
+        raise ValueError("Recording has only one participant.")
 
     participant_ids = [p["Id"] for p in header["yaml_header"]["Participants"]]
 
     results = {}
     for pid in participant_ids:
-        # find channels for this participant (specific to PID or common to all)
+        # find channels for this participant
         ch_indices = []
         for i, ch_name in enumerate(header["ch_names"]):
             if _is_participant_channel(ch_name, pid):
@@ -47,7 +50,7 @@ def split_participants(header, data, markers, impedances):
         participant_header["n_participants"] = 1
         participant_header["n_channels"] = len(ch_indices)
         participant_header["ch_names"] = [
-            re.sub(r"\s*\(.+\)$", "", header["ch_names"][i]) for i in ch_indices
+            _remove_participant_suffix(header["ch_names"][i]) for i in ch_indices
         ]
         participant_header["ch_types"] = [header["ch_types"][i] for i in ch_indices]
         participant_header["ch_units"] = [header["ch_units"][i] for i in ch_indices]
@@ -61,8 +64,7 @@ def split_participants(header, data, markers, impedances):
             participant_impedances = {}
             for ch_name, value in impedances.items():
                 if _is_participant_channel(ch_name, pid):
-                    # remove participant ID suffix from channel name
-                    participant_impedances[re.sub(r"\s*\(.+\)$", "", ch_name)] = value
+                    participant_impedances[_remove_participant_suffix(ch_name)] = value
             if not participant_impedances:
                 participant_impedances = None
 
@@ -74,6 +76,22 @@ def split_participants(header, data, markers, impedances):
         )
 
     return results
+
+
+def _remove_participant_suffix(ch_name):
+    """Remove participant ID suffix from a channel name.
+
+    Parameters
+    ----------
+    ch_name : str
+        Channel name, possibly with participant ID suffix (e.g., "Fz (P1)").
+
+    Returns
+    -------
+    str
+        Channel name without the participant ID suffix.
+    """
+    return re.sub(r"\s*\([^)]*\)$", "", ch_name)
 
 
 def _is_participant_channel(ch_name, participant_id):

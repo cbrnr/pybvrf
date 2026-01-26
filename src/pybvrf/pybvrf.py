@@ -251,7 +251,7 @@ def _read_bvri(fname, ch_names):
     datetime_lines = [s for s in lines if re.match(r"^\d{4}-\d{2}-\d{2}", s)]
 
     if not electrode_lines or not datetime_lines:
-        raise ValueError(f"Could not parse {fname}: missing required lines")
+        raise ValueError(f"Could not parse {fname} (missing required lines).")
 
     electrodes = electrode_lines[0].split("\t")[1:]
     values = datetime_lines[0].split("\t")[1:]
@@ -292,10 +292,10 @@ def _validate_fname(fname, extensions):
     if isinstance(extensions, str):
         if fname.suffix not in (extensions, ""):
             raise ValueError(
-                f"Invalid file extension {fname.suffix} (expected {extensions})"
+                f"Invalid file extension {fname.suffix} (expected {extensions})."
             )
         return fname.with_suffix(extensions)
     else:
         if fname.suffix not in (*extensions, ""):
-            raise ValueError(f"Invalid file extension {fname.suffix}")
+            raise ValueError(f"Invalid file extension {fname.suffix}.")
         return fname.with_suffix("")

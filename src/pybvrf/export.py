@@ -59,7 +59,7 @@ class RawBVRF(BaseRaw):
         ]
         info = create_info(ch_names=header["ch_names"], sfreq=fs, ch_types=ch_types)
 
-        kwargs.pop("preload", None)  # preload is not supported as a kwarg here
+        kwargs.pop("preload", None)
         super().__init__(
             preload=data,
             info=info,
@@ -99,42 +99,59 @@ def read_raw_bvrf(fname, participants=None, split=False, *args, **kwargs):
     RawBVRF | dict of RawBVRF
         The raw data object (if `split=False`) or a dict of raw data objects with PID
         as keys (if `split=True`).
+
+    Raises
+    ------
+    ValueError
+        If invalid participant IDs are provided.
+    ValueError
+        If `split=True` and the recording has only one participant.
     """
     header, data, markers, _ = read_bvrf(fname)
 
-    # get available participant IDs
-    if "Participants" in header["yaml_header"]:
-        all_pids = [p["Id"] for p in header["yaml_header"]["Participants"]]
-    else:
-        # single participant recording without explicit participant list
-        all_pids = ["P1"]
-
-    # normalize and validate participants parameter
-    if participants is not None:
-        if isinstance(participants, str):
-            participants = [participants]
-
-        if not participants or any(not pid for pid in participants):
+    # validate parameters
+    if header["n_participants"] == 1:
+        if split:
             raise ValueError(
-                "Participant list cannot be empty and must contain non-empty IDs"
+                "Cannot split recording with only one participant (use split=False)."
             )
-
-        if invalid_pids := [pid for pid in participants if pid not in all_pids]:
+        if participants is not None:
             raise ValueError(
-                f"Invalid participant ID(s): {invalid_pids}. Available participants: "
-                f"{all_pids}"
+                "The `participants` parameter is not supported for single participant "
+                "recordings."
             )
     else:
-        participants = all_pids
+        # multi-participant recording
+        participant_ids = [p["Id"] for p in header["yaml_header"]["Participants"]]
 
-    if split:
+        # normalize and validate participants parameter
+        if participants is not None:
+            if isinstance(participants, str):
+                participants = [participants]
+
+            if not participants or any(not pid for pid in participants):
+                raise ValueError(
+                    "Participant list cannot be empty and must contain non-empty IDs."
+                )
+
+            if invalid_ids := [
+                pid for pid in participants if pid not in participant_ids
+            ]:
+                raise ValueError(
+                    f"Invalid participant ID(s) provided: {invalid_ids}. "
+                    f"Available participants: {participant_ids}."
+                )
+        else:
+            participants = participant_ids  # load all participants
+
+    if split:  # dict of RawBVRF objects
         participant_data = split_participants(header, data, markers, None)
         return {
             pid: RawBVRF.from_data(*participant_data[pid][:3], *args, **kwargs)
             for pid in participants
         }
-    else:
-        if header["n_participants"] > 1 and set(participants) != set(all_pids):
+    else:  # single RawBVRF object
+        if header["n_participants"] > 1 and set(participants) != set(participant_ids):
             ch_indices = [
                 i
                 for i, ch_name in enumerate(header["ch_names"])
