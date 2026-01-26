@@ -50,18 +50,18 @@ def read_bvrf(fname):
     markers : ndarray
         Markers.
     impedances : dict | None
-        Electrode impedances (in kOhm) or None if not available.
+        Electrode impedances (in kΩ) or None if not available.
 
     Notes
     -----
-    A BVRF recording consists of multiple files, which are expected to be available in
+    A BVRF recording consists of multiple files which are expected to be available in
     the same directory. The required files are:
+
     - `<fname>.bvrh` (header file)
     - `<fname>.bvrd` (data file)
     - `<fname>.bvrm` (marker file)
 
-    Optionally, the following file may also be present:
-    - `<fname>.bvri` (impedance file)
+    Optionally, `<fname>.bvri` (impedance file) may also be present.
 
     See https://www.brainproducts.com/download/bvrf-reference-specification/ for the
     official BVRF specification.
@@ -99,18 +99,13 @@ def read_bvrf_header(fname):
 
     Returns
     -------
-    header : dict
-        Dictionary containing header information with the following keys:
-        - "fname": path to the header file
-        - "dtype": data type of the binary data
-        - "fs": sampling frequency in Hz
-        - "n_channels": total number of channels
-        - "n_participants": number of participants
-        - "ch_names": list of channel names
-        - "ch_types": list of channel types
-        - "ch_units": list of channel units
-        - "ch_resolutions": list of channel resolutions
-        - "yaml_header": original JSON header content
+    dict
+        Header information, see `read_bvrf()` for details.
+
+    Raises
+    ------
+    ValueError
+        If header validation fails.
 
     Examples
     --------
@@ -128,7 +123,7 @@ def read_bvrf_header(fname):
     try:
         jsonschema.validate(instance=header, schema=schema)
     except jsonschema.ValidationError as e:
-        raise ValueError(f"BVRF header validation failed: {e.message}") from e
+        raise ValueError(f"Could not parse {fname}: {e.message}") from e
 
     DTYPES = {
         "Int16": np.int16,
@@ -175,16 +170,16 @@ def _read_bvrd(fname, dtype, n_channels, ch_units, ch_resolutions):
 
     Parameters
     ----------
-    fname : str
-        Path to the .bvrd file.
-    dtype : NumPy data type
-        Data type for reading binary data.
+    fname : str | Path
+        Path to the BVRF data file (with or without `.bvrd` extension).
+    dtype : np.float32 | np.float64 | np.int16 | np.int32
+        Data type of the binary data.
     n_channels : int
-        Number of channels in the file.
+        Number of channels.
     ch_units : list of str
-        Units for each channel.
+        Channel units.
     ch_resolutions : list of float
-        Resolution per bit for each channel.
+        Channel resolutions.
 
     Returns
     -------
@@ -206,8 +201,8 @@ def _read_bvrm(fname):
 
     Parameters
     ----------
-    fname : str
-        Path to the .bvrm file.
+    fname : str | Path
+        Path to the BVRF marker file (with or without `.bvrm` extension).
 
     Returns
     -------
@@ -231,15 +226,20 @@ def _read_bvri(fname, ch_names):
 
     Parameters
     ----------
-    fname : str
-        Path to the .bvri file.
+    fname : str | Path
+        Path to the BVRF impedance file (with or without `.bvri` extension).
     ch_names : list of str
         Channel names.
 
     Returns
     -------
-    dict or None
-        Impedances for all electrodes, or None if impedances are not available.
+    dict | None
+        Impedances for all electrodes or None if impedances are not available.
+
+    Raises
+    ------
+    ValueError
+        If the impedance file cannot be parsed.
     """
     fname = _validate_fname(fname, ".bvri")
 
@@ -251,7 +251,7 @@ def _read_bvri(fname, ch_names):
     datetime_lines = [s for s in lines if re.match(r"^\d{4}-\d{2}-\d{2}", s)]
 
     if not electrode_lines or not datetime_lines:
-        return None
+        raise ValueError(f"Could not parse {fname}: missing required lines")
 
     electrodes = electrode_lines[0].split("\t")[1:]
     values = datetime_lines[0].split("\t")[1:]
@@ -263,7 +263,7 @@ def _read_bvri(fname, ch_names):
         if ch_name in set(ch_names):
             result[ch_name] = float(value)
 
-    return result if result else None
+    return result
 
 
 def _validate_fname(fname, extensions):
@@ -280,7 +280,7 @@ def _validate_fname(fname, extensions):
     -------
     Path
         Normalized path with the expected extension (if single extension provided) or
-        without extension (if list of extensions provided).
+        without extension (if list of allowed extensions provided).
 
     Raises
     ------
