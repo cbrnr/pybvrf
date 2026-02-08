@@ -57,16 +57,12 @@ def split_participants(header, data, markers, impedances):
         participant_header["ch_resolutions"] = [
             header["ch_resolutions"][i] for i in ch_indices
         ]
+        participant_header["ch_positions"] = _filter_dict_by_participant(
+            header["ch_positions"], pid
+        )
 
         # filter impedances for this participant
-        participant_impedances = None
-        if impedances is not None:
-            participant_impedances = {}
-            for ch_name, value in impedances.items():
-                if _is_participant_channel(ch_name, pid):
-                    participant_impedances[_remove_participant_suffix(ch_name)] = value
-            if not participant_impedances:
-                participant_impedances = None
+        participant_impedances = _filter_dict_by_participant(impedances, pid)
 
         results[pid] = (
             participant_header,
@@ -113,3 +109,27 @@ def _is_participant_channel(ch_name, participant_id):
     is_participant_channel = re.search(rf"\({re.escape(participant_id)}\)$", ch_name)
     is_common_channel = not re.search(r"\(.+\)$", ch_name)
     return bool(is_participant_channel or is_common_channel)
+
+
+def _filter_dict_by_participant(data_dict, participant_id):
+    """Filter a dictionary by participant ID.
+
+    Parameters
+    ----------
+    data_dict : dict | None
+        Dictionary with channel names as keys.
+    participant_id : str
+        Participant ID to filter for.
+
+    Returns
+    -------
+    dict | None
+        Filtered dictionary with participant suffix removed from keys, or None.
+    """
+    if data_dict is None:
+        return None
+    result = {}
+    for name, value in data_dict.items():
+        if _is_participant_channel(name, participant_id):
+            result[_remove_participant_suffix(name)] = value
+    return result if result else None

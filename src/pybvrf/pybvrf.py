@@ -43,6 +43,8 @@ def read_bvrf(fname):
             Channel units.
         - ch_resolutions : list of float
             Channel resolutions.
+        - ch_positions : dict | None
+            Channel positions (x/y/z coordinates in m) or None if not available.
         - yaml_header : dict
             Original JSON header.
     data : ndarray, shape (n_channels, n_samples)
@@ -149,6 +151,26 @@ def read_bvrf_header(fname):
         ch_units.append(ch["Unit"])
         ch_resolutions.append(ch.get("ResolutionPerBit", 1))
 
+    ch_positions = None
+    if "Electrodes" in header["EEGModality"]:
+        ch_positions = {}
+        for electrode in header["EEGModality"]["Electrodes"]:
+            name = (
+                f"{electrode['Name']} ({electrode['ParticipantId']})"
+                if "ParticipantId" in electrode
+                else electrode["Name"]
+            )
+            ch_positions[name] = electrode.get("Coordinates", None)
+
+        if any(ch_positions.values()):  # if EEG coordinates are available
+            UNITS = {"m": 1e0, "dm": 1e-1, "cm": 1e-2, "mm": 1e-3}
+            unit = header["EEGModality"]["CoordinateSystems"]["EEGCoordinateUnit"]
+            for name, coords in ch_positions.items():
+                if coords is not None:
+                    ch_positions[name] = [c * UNITS[unit] for c in coords]
+        else:
+            ch_positions = None
+
     return {
         "fname": fname.with_suffix(""),
         "dtype": DTYPES[
@@ -161,6 +183,7 @@ def read_bvrf_header(fname):
         "ch_types": ch_types,
         "ch_units": ch_units,
         "ch_resolutions": ch_resolutions,
+        "ch_positions": ch_positions,
         "yaml_header": header,
     }
 
