@@ -5,6 +5,7 @@
 """Module for reading BrainVision Recording Format (BVRF) files into MNE-Python."""
 
 from mne import create_info
+from mne.channels import make_dig_montage
 from mne.io import BaseRaw, get_channel_type_constants
 
 from pybvrf.pybvrf import read_bvrf
@@ -58,6 +59,9 @@ class RawBVRF(BaseRaw):
             for ch_type in header["ch_types"]
         ]
         info = create_info(ch_names=header["ch_names"], sfreq=fs, ch_types=ch_types)
+
+        if header["ch_positions"] is not None:
+            info.set_montage(make_dig_montage(header["ch_positions"]))
 
         kwargs.pop("preload", None)
         super().__init__(
