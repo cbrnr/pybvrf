@@ -1,3 +1,86 @@
 ## PyBVRF
 
-PyBVRF is a Python package for working with BVRF (BrainVision Reader Format) files.
+PyBVRF is a Python package for working with [BVRF (BrainVision Reader Format)](https://www.brainproducts.com/download/bvrf-reference-specification/) files.
+
+A BVRF recording consists of multiple files which are expected to be available in the same directory. The required files are:
+
+- `<fname>.bvrh` (header file)
+- `<fname>.bvrd` (data file)
+- `<fname>.bvrm` (marker file)
+
+Optionally, `<fname>.bvri` (impedance file) may also be present.
+
+
+### Basic usage
+
+Use `read_bvrf()` to load a recording. The file extension is optional (the function accepts any of the four supported extensions or just the base filename).
+
+```python
+from pybvrf import read_bvrf
+
+header, data, markers, impedances = read_bvrf("recording")
+```
+
+Here, `header` is a dict containing metadata about the recording (such as sampling frequency, channel names, and participant information):
+
+```python
+print(f"Sampling frequency: {header['fs']} Hz")
+print(f"Number of channels: {header['n_channels']}")
+print(f"Channel names: {header['ch_names']}")
+print(f"Number of participants: {header['n_participants']}")
+```
+
+The entire original header information is available as `header["yaml_header"]` (a dict parsed from the YAML header file).
+
+Next, `data` is a 2D NumPy array (channels x samples) containing the EEG signals:
+
+```python
+print(f"Data shape: {data.shape}")
+```
+
+Finally, `markers` contains information about events in a NumPy structured array:
+
+```python
+print(f"Number of markers: {len(markers)}")
+print(f"Marker fields: {markers.dtype.names}")
+```
+
+If impedances are available, `impedances` is a dict mapping channel names to impedance values:
+
+```python
+if impedances:
+    print(f"Impedances: {impedances}")
+```
+
+
+### MNE-Python integration
+
+PyBVRF provides seamless integration with [MNE-Python](https://mne.tools/) for advanced EEG analysis:
+
+```python
+from pybvrf import read_raw_bvrf
+
+raw = read_raw_bvrf("recording.bvrh")
+```
+
+Work with multi-participant recordings:
+
+```python
+from pybvrf import read_raw_bvrf
+
+# load specific participants
+raw = read_raw_bvrf("multi_recording.bvrh", participants="P1")
+raw = read_raw_bvrf("multi_recording.bvrh", participants=["P1", "P2"])
+
+# split into separate Raw objects per participant
+raw_dict = read_raw_bvrf("multi_recording.bvrh", split=True)
+for pid, raw in raw_dict.items():
+    print(f"Participant {pid}: {raw.info['nchan']} channels")
+    
+# load specific participants and split
+raw_dict = read_raw_bvrf("multi_recording.bvrh", participants=["P1", "P3"], split=True)
+```
+
+### Acknowledgements
+
+The initial release of PyBVRF was sponsored by [Brain Products](https://www.brainproducts.com/).
