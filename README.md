@@ -2,6 +2,13 @@
 
 PyBVRF is a Python package for working with [BVRF (BrainVision Reader Format)](https://www.brainproducts.com/download/bvrf-reference-specification/) files.
 
+The package includes the following features:
+
+- Support for multi-participant recordings
+- Seamless integration with MNE-Python
+- Convenient access to metadata (including the original YAML header)
+- Support for markers and impedance data
+
 A BVRF recording consists of multiple files which are expected to be available in the same directory. The required files are:
 
 - `<fname>.bvrh` (header file)
@@ -52,6 +59,17 @@ if impedances:
     print(f"Impedances: {impedances}")
 ```
 
+### Advanced usage
+
+Multi-participant recordings (`header["n_participants"] > 1`) are available in a single data structure by default, with channels from all participants concatenated together (but suffixed with the participant ID). For example, if there are two participants P1 and P2, the channel names might be "C3 (P1)", "Cz (P1)", "C4 (P1)", "C3 (P2)", "Cz (P2)", and "C4 (P2)". You can use `split_participants()` to split the data into separate data structures per participant:
+
+```python
+from pybvrf import split_participants
+
+participant_data = split_participants(header, data, markers, impedances)
+```
+
+This returns a dict mapping participant IDs to their respective data (a tuple of header, data, markers, and impedances).
 
 ### MNE-Python integration
 
