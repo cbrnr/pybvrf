@@ -39,7 +39,7 @@ print(f"Number of participants: {header['n_participants']}")
 
 The entire original header information is available as `header["yaml_header"]` (a dict parsed from the YAML header file).
 
-Next, `data` is a 2D NumPy array (channels x samples) containing the EEG signals:
+Next, `data` is a 2D NumPy array (channels ⨉ samples) containing the EEG signals:
 
 ```python
 print(f"Data shape: {data.shape}")
