@@ -6,6 +6,8 @@ build-backend = "uv_build"
 name = "pybvrf"
 version = "0.1.0"
 description = "A Python package for working with BrainVision Recording Format (BVRF) files."
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 authors = [
     {name = "Clemens Brunner", email = "clemens.brunner@gmail.com"},
 ]
