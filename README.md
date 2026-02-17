@@ -1,6 +1,6 @@
 # PyBVRF
 
-PyBVRF is a Python package for working with [BVRF (BrainVision Reader Format)](https://www.brainproducts.com/download/bvrf-reference-specification/) files.
+PyBVRF is a Python package for working with [BVRF (BrainVision Recording Format)](https://www.brainproducts.com/download/bvrf-reference-specification/) files.
 
 The package includes the following features:
 
