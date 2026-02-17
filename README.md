@@ -1,3 +1,7 @@
+![Python](https://img.shields.io/pypi/pyversions/pybvrf.svg?logo=python&logoColor=white)
+[![PyPI](https://img.shields.io/pypi/v/pybvrf)](https://pypi.org/project/pybvrf/)
+[![License](https://img.shields.io/github/license/cbrnr/pybvrf?color=68%2C192%2C58)](LICENSE)
+
 # PyBVRF
 
 PyBVRF is a Python package for working with [BVRF (BrainVision Recording Format)](https://www.brainproducts.com/download/bvrf-reference-specification/) files.
