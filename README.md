@@ -1,4 +1,4 @@
-## PyBVRF
+# PyBVRF
 
 PyBVRF is a Python package for working with [BVRF (BrainVision Reader Format)](https://www.brainproducts.com/download/bvrf-reference-specification/) files.
 
@@ -18,7 +18,7 @@ A BVRF recording consists of multiple files which are expected to be available i
 Optionally, `<fname>.bvri` (impedance file) may also be present.
 
 
-### Basic usage
+## Basic usage
 
 Use `read_bvrf()` to load a recording. The file extension is optional (the function accepts any of the four supported extensions or just the base filename).
 
@@ -59,7 +59,8 @@ if impedances:
     print(f"Impedances: {impedances}")
 ```
 
-### Advanced usage
+
+## Advanced usage
 
 Multi-participant recordings (`header["n_participants"] > 1`) are available in a single data structure by default, with channels from all participants concatenated together (but suffixed with the participant ID). For example, if there are two participants P1 and P2, the channel names might be "C3 (P1)", "Cz (P1)", "C4 (P1)", "C3 (P2)", "Cz (P2)", and "C4 (P2)". You can use `split_participants()` to split the data into separate data structures per participant:
 
@@ -71,9 +72,10 @@ participant_data = split_participants(header, data, markers, impedances)
 
 This returns a dict mapping participant IDs to their respective data (a tuple of header, data, markers, and impedances).
 
-### MNE-Python integration
 
-PyBVRF provides seamless integration with [MNE-Python](https://mne.tools/) for advanced EEG analysis:
+## MNE-Python integration
+
+PyBVRF integrates seamlessly with [MNE-Python](https://mne.tools/) for advanced EEG analysis:
 
 ```python
 from pybvrf import read_raw_bvrf
@@ -81,7 +83,11 @@ from pybvrf import read_raw_bvrf
 raw = read_raw_bvrf("recording.bvrh")
 ```
 
-Work with multi-participant recordings:
+Like `read_bvrf()`, `read_raw_bvrf()` accepts any of the four supported file extensions or just the base filename. It returns a [`Raw`](https://mne.tools/stable/generated/mne.io.Raw.html) object containing the EEG data, along with the appropriate metadata and annotations.
+
+If a recording includes multiple participants, the function returns a single `Raw` object by default, with all participants' data concatenated (channel names are suffixed with the participant ID as described above).
+
+You can also load selected participants and/or split multi-participant recordings into separate `Raw` objects:
 
 ```python
 from pybvrf import read_raw_bvrf
@@ -99,6 +105,7 @@ for pid, raw in raw_dict.items():
 raw_dict = read_raw_bvrf("multi_recording.bvrh", participants=["P1", "P3"], split=True)
 ```
 
-### Acknowledgements
+
+## Acknowledgements
 
 The initial release of PyBVRF was sponsored by [Brain Products](https://www.brainproducts.com/).
