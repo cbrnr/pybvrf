@@ -6,6 +6,7 @@
 
 import json
 import re
+from importlib.resources import files
 from pathlib import Path
 
 import jsonschema
@@ -120,7 +121,7 @@ def read_bvrf_header(fname):
     with open(fname, encoding="utf-8-sig") as f:
         header = json.load(f)
 
-    with open(Path(__file__).parent / "BVRFHeader-1.0.0.json") as f:
+    with files("pybvrf").joinpath("BVRFHeader-1.0.0.json").open() as f:
         schema = json.load(f)
     try:
         jsonschema.validate(instance=header, schema=schema)
