@@ -4,9 +4,9 @@
 
 """Module for reading BrainVision Recording Format (BVRF) files."""
 
-from importlib.resources import files
 import json
 import re
+from importlib.resources import files
 from pathlib import Path
 
 import jsonschema
