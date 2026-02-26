@@ -1,3 +1,5 @@
+## [UNRELEASED] · YYYY-MM-DD
+
 ## [0.1.2] · 2026-02-26
 ### 🔧 Fixed
 - Bump `uv-build` to latest version ([#4](https://github.com/cbrnr/pybvrf/pull/4) by [Clemens Brunner](https://github.com/cbrnr))
