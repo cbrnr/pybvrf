@@ -79,7 +79,7 @@ This returns a dict mapping participant IDs to their respective data (a tuple of
 
 ## MNE-Python integration
 
-PyBVRF integrates seamlessly with [MNE-Python](https://mne.tools/) for advanced EEG analysis:
+PyBVRF optionally integrates with [MNE-Python](https://mne.tools/) for advanced EEG analysis (to use this feature, make sure to install the `mne` extra via `pybvrf[mne]`). You can then use the `read_raw_bvrf()` function to load a BVRF recording directly into an MNE `Raw` object:
 
 ```python
 from pybvrf import read_raw_bvrf

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["uv_build >= 0.10.6, < 0.11.0"]
+requires = ["uv_build >= 0.10.9, < 0.11.0"]
 build-backend = "uv_build"
 
 [project]
@@ -23,15 +23,18 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
-keywords = ["brainvision", "bvrf", "eeg", "neuroscience", "data format", "reader", "mne"]
+keywords = ["brainvision", "bvrf", "eeg", "neuroscience", "data format", "reader"]
 dependencies = [
     "jsonschema>=4.26.0",
-    "mne>=1.11.0",
     "numpy>=2.2.0",
 ]
 
+[project.optional-dependencies]
+mne = ["mne>=1.11.0"]
+
 [dependency-groups]
 dev = [
+    "mne>=1.11.0",
     "pytest>=9.0.2",
     "ruff>=0.14.14",
 ]
