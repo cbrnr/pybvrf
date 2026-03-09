@@ -17,6 +17,7 @@ except ImportError:
             "'mne' extra (pybvrf[mne])."
         )
 
+
 try:
     __version__ = version("pybvrf")
 except PackageNotFoundError:
