@@ -4,9 +4,18 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
-from pybvrf.export import read_raw_bvrf
 from pybvrf.pybvrf import read_bvrf, read_bvrf_header
 from pybvrf.utils import split_participants
+
+try:
+    from pybvrf.mne_io import read_raw_bvrf
+except ImportError:
+
+    def read_raw_bvrf(*args, **kwargs):
+        raise ImportError(
+            "MNE-Python is required to use read_raw_bvrf(). Install pybvrf with the "
+            "'mne' extra (pybvrf[mne])."
+        )
 
 try:
     __version__ = version("pybvrf")

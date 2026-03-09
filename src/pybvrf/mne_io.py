@@ -2,7 +2,7 @@
 #
 # License: BSD (3-clause)
 
-"""Module for reading BrainVision Recording Format (BVRF) files into MNE-Python."""
+"""MNE-Python integration for reading BrainVision Recording Format (BVRF) files."""
 
 from mne import create_info
 from mne.channels import make_dig_montage
