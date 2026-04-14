@@ -1,4 +1,4 @@
-## [UNRELEASED] · YYYY-MM-DD
+## [0.1.3] · 2026-04-14
 ### 🌀 Changed
 - Make MNE-Python integration optional (install with `pybvrf[mne]` to use) ([#5](https://github.com/cbrnr/pybvrf/pull/5) by [Clemens Brunner](https://github.com/cbrnr))
 
