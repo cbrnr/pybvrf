@@ -29,6 +29,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install packaging
+        run: pip install packaging
+
       - name: Check uv_build compatibility and update pyproject.toml
         id: check
         run: |
