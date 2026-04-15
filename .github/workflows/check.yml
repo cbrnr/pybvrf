@@ -54,9 +54,9 @@ jobs:
         env:
           UV_LATEST_VERSION: ${{ steps.uv-version.outputs.version }}
         run: |
-          python .github/check_uv_build.py
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
-        continue-on-error: true
+          EXIT_CODE=0
+          python .github/check_uv_build.py || EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
 
       - name: Commit updated requirement
         if: steps.check.outputs.exit_code == '2' && github.event_name == 'pull_request'
