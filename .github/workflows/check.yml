@@ -65,7 +65,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add pyproject.toml
           git commit -m "Update uv_build requirement for uv ${{ steps.uv-version.outputs.version }}"
-          git push
+          git push origin HEAD:${{ github.head_ref }}
 
       - name: Fail if incompatible and not a PR
         if: steps.check.outputs.exit_code == '2' && github.event_name != 'pull_request'
