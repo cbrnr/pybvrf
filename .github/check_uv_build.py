@@ -29,14 +29,6 @@ print(f"Latest uv version: {latest}")
 if latest in specifiers:
     print(f"OK: '{requirement}' is compatible with uv {latest}.")
 else:
-    new_lower = str(latest)
-    new_upper = f"{latest.major}.{latest.minor + 1}.0"
-    new_requirement = f"uv_build >= {new_lower}, < {new_upper}"
-    print(
-        f"'{requirement}' is NOT compatible with uv {latest}, updating to "
-        f"'{new_requirement}'."
-    )
-    new_content = content.replace(match.group(0), f'"{new_requirement}"')
-    with open("pyproject.toml", "w") as f:
-        f.write(new_content)
-    sys.exit(2)
+    print(f"ERROR: '{requirement}' is NOT compatible with uv {latest}.")
+    print("Please update the uv_build requirement in pyproject.toml.")
+    sys.exit(1)
