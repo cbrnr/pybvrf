@@ -32,7 +32,10 @@ else:
     new_lower = str(latest)
     new_upper = f"{latest.major}.{latest.minor + 1}.0"
     new_requirement = f"uv_build >= {new_lower}, < {new_upper}"
-    print(f"'{requirement}' is NOT compatible with uv {latest}. Updating to: {new_requirement}")
+    print(
+        f"'{requirement}' is NOT compatible with uv {latest}, updating to "
+        f"'{new_requirement}'."
+    )
     new_content = content.replace(match.group(0), f'"{new_requirement}"')
     with open("pyproject.toml", "w") as f:
         f.write(new_content)
