@@ -1,11 +1,6 @@
 name: Check
 
 on:
-  pull_request:
-    paths-ignore:
-      - "docs/**"
-  push:
-    branches: [main]
   workflow_call:
 
 

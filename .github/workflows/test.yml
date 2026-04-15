@@ -9,7 +9,11 @@ on:
   workflow_call:
 
 jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+
   test:
+    needs: check
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
