@@ -5,12 +5,15 @@ on:
     types: [published]
 
 jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+
   test:
     uses: ./.github/workflows/test.yml
 
   publish:
     name: Publish to PyPI
-    needs: test
+    needs: [check, test]
     runs-on: ubuntu-24.04
     permissions:
       id-token: write
