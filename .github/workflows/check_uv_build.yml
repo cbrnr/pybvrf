@@ -1,0 +1,98 @@
+name: Check uv_build compatibility
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-uv-build:
+    name: Check uv_build compatibility
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Get latest uv version
+        id: uv-version
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/astral-sh/uv/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          echo "Latest uv version: $LATEST"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Check uv_build compatibility and update pyproject.toml
+        id: check
+        run: |
+          python - <<'EOF'
+          import os
+          import re
+          import sys
+          from packaging.version import Version
+          from packaging.specifiers import SpecifierSet
+
+          with open("pyproject.toml") as f:
+              content = f.read()
+
+          match = re.search(r'"(uv_build\s*[^"]+)"', content)
+          if not match:
+              print("ERROR: Could not find uv_build requirement in pyproject.toml")
+              sys.exit(1)
+
+          requirement = match.group(1)
+          print(f"Found requirement: {requirement}")
+
+          spec_str = requirement.replace("uv_build", "").strip()
+          specifiers = SpecifierSet(spec_str)
+
+          latest = Version("${{ steps.uv-version.outputs.version }}")
+          print(f"Latest uv version: {latest}")
+
+          if latest in specifiers:
+              print(f"OK: '{requirement}' is compatible with uv {latest}.")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("compatible=true\n")
+          else:
+              new_lower = str(latest)
+              new_upper = f"{latest.major}.{latest.minor + 1}.0"
+              new_requirement = f"uv_build >= {new_lower}, < {new_upper}"
+              is_pr = os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
+              if is_pr:
+                  print(f"ERROR: '{requirement}' is NOT compatible with uv {latest}.")
+                  print(f"Please update the [build-system] requires to: {new_requirement}")
+                  sys.exit(1)
+              else:
+                  print(f"'{requirement}' is NOT compatible with uv {latest}. Updating pyproject.toml...")
+                  new_content = content.replace(match.group(0), f'"{new_requirement}"')
+                  with open("pyproject.toml", "w") as f:
+                      f.write(new_content)
+                  print(f"Updated requirement to: {new_requirement}")
+                  with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                      f.write("compatible=false\n")
+                      f.write(f"new_requirement={new_requirement}\n")
+                      f.write(f"uv_version={latest}\n")
+          EOF
+
+      - name: Create pull request
+        if: steps.check.outputs.compatible == 'false' && github.event_name != 'pull_request'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "Update uv-build requirement for uv ${{ steps.check.outputs.uv_version }}"
+          branch: "update-uv-build-${{ steps.uv-version.outputs.version }}"
+          title: "Update uv-build requirement for uv ${{ steps.check.outputs.uv_version }}"
+          body: |
+            The latest `uv` release (${{ steps.check.outputs.uv_version }}) is not compatible with the current `uv-build` requirement in `pyproject.toml`.
+
+            This PR updates the requirement to:
+            ```
+            ${{ steps.check.outputs.new_requirement }}
+            ```
+          labels: dependencies
