@@ -8,6 +8,8 @@ on:
     branches: [main]
   workflow_call:
 
+permissions:
+  contents: write
 
 jobs:
   style:
@@ -48,6 +50,23 @@ jobs:
         run: pip install packaging
 
       - name: Check uv_build compatibility
+        id: check
         env:
           UV_LATEST_VERSION: ${{ steps.uv-version.outputs.version }}
-        run: python .github/check_uv_build.py
+        run: |
+          python .github/check_uv_build.py
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Commit updated requirement
+        if: steps.check.outputs.exit_code == '2' && github.event_name == 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml
+          git commit -m "Update uv_build requirement for uv ${{ steps.uv-version.outputs.version }}"
+          git push
+
+      - name: Fail if incompatible and not a PR
+        if: steps.check.outputs.exit_code == '2' && github.event_name != 'pull_request'
+        run: exit 1
