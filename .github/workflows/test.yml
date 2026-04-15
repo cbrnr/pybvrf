@@ -10,6 +10,7 @@ on:
 
 jobs:
   check:
+    name: Check
     uses: ./.github/workflows/check.yml
 
   test:
