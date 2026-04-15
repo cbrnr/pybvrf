@@ -12,13 +12,11 @@ authors = [
     {name = "Clemens Brunner", email = "clemens.brunner@gmail.com"},
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 classifiers = [
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -26,17 +24,17 @@ classifiers = [
 keywords = ["brainvision", "bvrf", "eeg", "neuroscience", "data format", "reader"]
 dependencies = [
     "jsonschema>=4.26.0",
-    "numpy>=2.2.0",
+    "numpy>=2.4.4",
 ]
 
 [project.optional-dependencies]
-mne = ["mne>=1.11.0"]
+mne = ["mne>=1.12.0"]
 
 [dependency-groups]
 dev = [
-    "mne>=1.11.0",
-    "pytest>=9.0.2",
-    "ruff>=0.14.14",
+    "mne>=1.12.0",
+    "pytest>=9.0.3",
+    "ruff>=0.15.10",
 ]
 
 [project.urls]
