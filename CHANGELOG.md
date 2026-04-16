@@ -1,3 +1,5 @@
+## [UNRELEASED] · YYYY-MM-DD
+
 ## [0.1.4] · 2026-04-16
 ### 🗑️ Removed
 - Remove support for Python 3.10 and 3.11 ([#8](https://github.com/cbrnr/pybvrf/pull/8) by [Clemens Brunner](https://github.com/cbrnr))
