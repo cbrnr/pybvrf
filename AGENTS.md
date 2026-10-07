@@ -24,7 +24,7 @@ CI (`.github/workflows/test.yml`) also runs two custom checks that must pass:
 - Line length is 88 characters (the default). This limit applies to all code, including docstrings.
 - Docstrings use NumPy style but with standard Markdown (single backticks for inline code, not reStructuredText double backticks).
 - Inline comments start with a lower-case letter and are a single sentence where possible.
-- Commit subjects: imperative mood, capitalized, ≤72 characters.
+- Commit subjects: imperative mood, capitalized, ≤72 characters, do not credit yourself as an AI agent anywhere (i.e.,no `Co-Authored-By` trailers or other attribution lines in commits, and no "Generated with" notes or similar in pull requests, issues, comments, or changelog entries).
 
 ## Architecture
 
