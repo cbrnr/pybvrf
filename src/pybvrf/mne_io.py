@@ -61,7 +61,13 @@ class RawBVRF(BaseRaw):
         info = create_info(ch_names=header["ch_names"], sfreq=fs, ch_types=ch_types)
 
         if header["ch_positions"] is not None:
-            info.set_montage(make_dig_montage(header["ch_positions"]))
+            # some channels (e.g., EOG) have no coordinates, so only use the others
+            ch_pos = {
+                name: pos
+                for name, pos in header["ch_positions"].items()
+                if pos is not None
+            }
+            info.set_montage(make_dig_montage(ch_pos), on_missing="ignore")
 
         kwargs.pop("preload", None)
         super().__init__(
