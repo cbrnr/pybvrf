@@ -1,4 +1,6 @@
 ## [UNRELEASED] · YYYY-MM-DD
+### 🔧 Fixed
+- Bump `uv-build` to latest version (PR_PLACEHOLDER)
 
 ## [0.1.4] · 2026-04-16
 ### 🗑️ Removed
