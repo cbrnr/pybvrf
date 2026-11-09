@@ -3,7 +3,7 @@
 - Bump `uv-build` to latest version ([#15](https://github.com/cbrnr/pybvrf/pull/15) by [Clemens Brunner](https://github.com/cbrnr))
 - Fix reading recordings with exactly one marker ([#13](https://github.com/cbrnr/pybvrf/pull/13) by [Clemens Brunner](https://github.com/cbrnr))
 - Fix reading recordings in which some channels (e.g., EOG) have no coordinates ([#12](https://github.com/cbrnr/pybvrf/pull/12) by [Clemens Brunner](https://github.com/cbrnr))
-- Fix spurious MNE fiducial warning when reading recordings with CapTrak coordinates (PR_PLACEHOLDER)
+- Fix spurious MNE fiducial warning when reading recordings with CapTrak coordinates ([#14](https://github.com/cbrnr/pybvrf/pull/14) by [Clemens Brunner](https://github.com/cbrnr))
 
 ## [0.1.4] · 2026-04-16
 ### 🗑️ Removed
