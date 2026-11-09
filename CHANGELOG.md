@@ -1,4 +1,4 @@
-## [UNRELEASED] · YYYY-MM-DD
+## [0.2.0] · 2026-11-09
 ### 🔧 Fixed
 - Bump `uv-build` to latest version ([#15](https://github.com/cbrnr/pybvrf/pull/15) by [Clemens Brunner](https://github.com/cbrnr))
 - Fix reading recordings with exactly one marker ([#13](https://github.com/cbrnr/pybvrf/pull/13) by [Clemens Brunner](https://github.com/cbrnr))
