@@ -230,18 +230,21 @@ def _read_bvrm(fname):
 
     Returns
     -------
-    ndarray
+    ndarray, shape (n_markers,)
         Markers (in a structured NumPy array).
     """
     fname = _validate_fname(fname, ".bvrm")
 
-    return np.genfromtxt(
-        fname,
-        delimiter="\t",
-        names=True,
-        dtype=None,
-        encoding="utf-8-sig",
-        autostrip=True,
+    # genfromtxt returns a 0-d array for a single marker
+    return np.atleast_1d(
+        np.genfromtxt(
+            fname,
+            delimiter="\t",
+            names=True,
+            dtype=None,
+            encoding="utf-8-sig",
+            autostrip=True,
+        )
     )
 
 
