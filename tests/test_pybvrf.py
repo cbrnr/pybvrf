@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from pybvrf.pybvrf import _validate_fname
+from pybvrf.pybvrf import _read_bvrm, _validate_fname
 
 
 def test_validate_fname():
@@ -26,6 +26,19 @@ def test_validate_fname():
 
     with pytest.raises(ValueError):
         _validate_fname("file.bvrf", [".bvrh", ".bvri"])  # invalid extension
+
+
+@pytest.mark.parametrize("n_markers", [1, 2])
+def test_read_bvrm_n_markers(tmp_path, n_markers):
+    lines = ["Type\tCode\tValue\tSample"]
+    lines += [f"Stimulus\tS\t{i}\t{10 * i}" for i in range(1, n_markers + 1)]
+    fname = tmp_path / "rec.bvrm"
+    fname.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    markers = _read_bvrm(fname)
+
+    assert markers.shape == (n_markers,)  # also for a single marker
+    assert list(markers["Sample"]) == [10 * i for i in range(1, n_markers + 1)]
 
 
 def test_import_with_mne():
