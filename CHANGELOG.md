@@ -1,7 +1,7 @@
 ## [UNRELEASED] · YYYY-MM-DD
 ### 🔧 Fixed
 - Bump `uv-build` to latest version ([#15](https://github.com/cbrnr/pybvrf/pull/15) by [Clemens Brunner](https://github.com/cbrnr))
-- Fix reading recordings with exactly one marker (PR_PLACEHOLDER)
+- Fix reading recordings with exactly one marker ([#13](https://github.com/cbrnr/pybvrf/pull/13) by [Clemens Brunner](https://github.com/cbrnr))
 
 ## [0.1.4] · 2026-04-16
 ### 🗑️ Removed
