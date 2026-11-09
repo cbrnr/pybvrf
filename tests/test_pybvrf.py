@@ -50,6 +50,48 @@ def test_import_with_mne():
     assert pybvrf.read_raw_bvrf.__module__ == "pybvrf.mne_io"
 
 
+def _make_raw(tmp_path, system):
+    from pybvrf.mne_io import RawBVRF
+
+    (tmp_path / "rec.bvrh").touch()  # MNE checks that the file exists
+    header = {
+        "fname": tmp_path / "rec",
+        "fs": 100.0,
+        "ch_names": ["Cz", "Pz"],
+        "ch_types": ["eeg", "eeg"],
+        "ch_positions": {"Cz": [0, 0, 0.1], "Pz": [0, -0.05, 0.09]},
+        "yaml_header": {
+            "EEGModality": {"CoordinateSystems": {"EEGCoordinateSystem": system}}
+        },
+    }
+    markers = np.array(
+        [("Stimulus", "S", 1, 5), ("Stimulus", "S", 2, 7)],
+        dtype=[("Type", "U8"), ("Code", "U1"), ("Value", "i8"), ("Sample", "i8")],
+    )
+    return RawBVRF.from_data(header, np.zeros((2, 100)), markers)
+
+
+def test_montage_captrak_no_fiducial_warning(tmp_path, recwarn):
+    pytest.importorskip("mne")
+
+    raw = _make_raw(tmp_path, "CapTrak")
+
+    assert not [w for w in recwarn if "Fiducial" in str(w.message)]
+    assert raw.get_montage().get_positions()["ch_pos"]["Pz"].tolist() == [
+        0,
+        -0.05,
+        0.09,
+    ]
+
+
+@pytest.mark.parametrize("system", ["Easycap", None])
+def test_montage_other_system_fiducial_warning(tmp_path, system):
+    pytest.importorskip("mne")
+
+    with pytest.warns(RuntimeWarning, match="Fiducial point nasion not found"):
+        _make_raw(tmp_path, system)
+
+
 def test_import_without_mne(monkeypatch):
     # remove and block mne and all mne.* submodules
     for key in [k for k in sys.modules if k == "mne" or k.startswith("mne.")]:

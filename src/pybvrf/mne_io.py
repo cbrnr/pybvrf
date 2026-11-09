@@ -67,7 +67,14 @@ class RawBVRF(BaseRaw):
                 for name, pos in header["ch_positions"].items()
                 if pos is not None
             }
-            info.set_montage(make_dig_montage(ch_pos), on_missing="ignore")
+            # CapTrak is MNE's head coordinate frame, so no fiducials are needed
+            system = (
+                header["yaml_header"]["EEGModality"].get("CoordinateSystems") or {}
+            ).get("EEGCoordinateSystem")
+            coord_frame = "head" if system == "CapTrak" else "unknown"
+            info.set_montage(
+                make_dig_montage(ch_pos, coord_frame=coord_frame), on_missing="ignore"
+            )
 
         kwargs.pop("preload", None)
         super().__init__(
